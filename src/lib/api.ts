@@ -106,7 +106,46 @@ export async function getUsuarios(token: string) {
   return data;
 }
 
+// Confirma que el ticket fue resuelto por parte del usuario
+export async function confirmarResolucionTicket(ticketId: number) {
+  const token = localStorage.getItem('token');
 
+  const res = await instance.patch(`/tickets/${ticketId}/confirmar`, {}, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res || res.status !== 200) {
+    throw new Error('Error al confirmar la resolución del ticket');
+  }
+
+  console.log("Respuesta del backend al confirmar:", res.data);
+
+  return res.data;
+}
+
+
+
+
+export const rechazarResolucionTicket = async (ticketId: number) => {
+  const token = localStorage.getItem('token');
+
+  const res = await instance.patch(
+    `/tickets/${ticketId}/rechazar`,
+    {}, // cuerpo vacío
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  if (res.status >= 400) {
+    throw new Error('Error al rechazar resolución');
+  }
+
+  return res.data;
+};
 
 
 

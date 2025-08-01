@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react';
 
-
-
 interface Usuario {
   id: number;
   nombre: string;
@@ -17,24 +15,40 @@ export default function TicketStatusChanger({
   currentPrioridad,
   onStatusChanged,
   onPrioridadChanged,
+  confirmadoPorUsuario,
+  rechazadoPorUsuario, // NUEVO: bandera para saber si fue rechazado
 }: {
   ticketId: number;
   currentStatus: string;
   currentPrioridad: string;
   onStatusChanged: (newStatus: string) => void;
   onPrioridadChanged: (newPrioridad: string) => void;
+  confirmadoPorUsuario: boolean;
+  rechazadoPorUsuario: boolean; // NUEVO
 }) {
   const [status, setStatus] = useState(currentStatus);
   const [prioridad, setPrioridad] = useState(currentPrioridad);
-  const [role, setRole] = useState<string>('user');
+  const [role, setRole] = useState<string | null>(null);
 
-  // Opciones de estado
-  const allOptions = ['no iniciado' , 'asignado' , 'en proceso' , 'resuelto' , 'completado'];
+  // Lista completa de estados
+  const allOptions = ['no iniciado', 'asignado', 'en proceso', 'resuelto', 'completado'];
+
+  // Opciones visibles dependiendo del rol y confirmación
   const visibleOptions = role === 'ti'
-    ? allOptions
-    : allOptions.filter(option => option !== 'completado');
+    ? allOptions.filter(option => {
+      if (option === 'completado') {
+        return confirmadoPorUsuario; // Solo si fue confirmado por el usuario
+      }
+      return true;
+    })
+    : [];
 
   useEffect(() => {
+    console.log('confirmadoPorUsuario:', confirmadoPorUsuario);
+  }, [confirmadoPorUsuario]);
+
+  useEffect(() => {
+
     const storedRole = localStorage.getItem('role');
     if (storedRole === 'ti' || storedRole === 'user') {
       setRole(storedRole);
@@ -69,8 +83,16 @@ export default function TicketStatusChanger({
     }
   };
 
+  if (!role || role !== 'ti') return null;
+
   return (
     <div className="mt-2 space-y-2">
+      {status === 'resuelto' && rechazadoPorUsuario && (
+        <p className="text-red-600 font-semibold">
+          ⚠️ El usuario rechazó la resolución del ticket.
+        </p>
+      )}
+
       <div>
         <label className="text-sm">Estado:</label>
         <select
@@ -85,6 +107,7 @@ export default function TicketStatusChanger({
           ))}
         </select>
       </div>
+
       <div>
         <label className="text-sm">Prioridad:</label>
         <select
@@ -99,6 +122,7 @@ export default function TicketStatusChanger({
           <option value="muy_alta">Muy Alta</option>
         </select>
       </div>
+
       <button
         onClick={handleUpdate}
         className="bg-green-600 text-white px-3 py-1 rounded mt-2"

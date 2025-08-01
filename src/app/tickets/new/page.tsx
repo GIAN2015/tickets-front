@@ -61,8 +61,8 @@ export default function NewTicketPage() {
   }, []);
 
   useEffect(() => {
-    if (user?.role === 'TI') {
-      fetch('http://localhost:3000/api/users')
+    if (user?.rol === 'TI') {
+      fetch('http://localhost:3001/api/users')
         .then((res) => res.json())
         .then((data) => {
           console.log("Usuarios cargados:", data);
@@ -158,7 +158,7 @@ export default function NewTicketPage() {
         />
 
         // Línea que muestra el dropdown para el TI
-        {user?.role === 'TI' && (
+        {user?.rol === 'ti' && (
           <div className="flex flex-col gap-2">
             <label className="text-sm font-medium">Usuario solicitante</label>
             <select
