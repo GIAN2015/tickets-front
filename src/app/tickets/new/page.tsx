@@ -7,7 +7,7 @@ import { jwtDecode } from 'jwt-decode';
 
 interface DecodedUser {
   id: number;
-  rol: 'USER' | 'TI' | 'ADMIN'; // ajusta si hay más roles
+  role: 'user' | 'ti' | 'admin'; // ajusta si hay más roles
   nombre: string;
   email: string;
 }
@@ -22,18 +22,16 @@ export default function NewTicketPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [prioridad, setPrioridad] = useState('media');
-  const [usuarios, setUsuarios] = useState([]);
+  const [usuarios, setUsuarios] = useState<any[]>([]); // 👈 importante que sea arreglo
+
   const [usuarioSolicitanteId, setUsuarioSolicitanteId] = useState('');
   const [estado, setEstado] = useState('Pendiente');
   const [role, setRole] = useState('');
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<DecodedUser | null>(null);
 
 
 
-  const estadosPorRol = {
-    USER: ['Pendiente', 'En Proceso', 'Resuelto'],
-    TI: ['Pendiente', 'En Proceso', 'Resuelto', 'Completado'],
-  };
+
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -49,19 +47,24 @@ export default function NewTicketPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
-      const decoded: any = jwtDecode(token);
-      setUser({
-        id: decoded.sub,
-        role: decoded.rol,
-        nombre: decoded.nombre,
-        email: decoded.email,
-      });
-    }
+    if (!token) return;
+
+    const decoded: any = jwtDecode(token);
+    console.log('Decoded JWT:', decoded);
+
+    const userObj: DecodedUser = {
+      id: Number(decoded.sub),
+      role: decoded.role.toLowerCase(), // 👈 normalizamos a minúsculas
+      nombre: decoded.username,
+      email: decoded.email,
+    };
+
+    setUser(userObj);
   }, []);
 
+
   useEffect(() => {
-    if (user?.rol === 'TI') {
+    if (user?.role === 'ti') {
       fetch('http://localhost:3001/api/users')
         .then((res) => res.json())
         .then((data) => {
@@ -74,16 +77,18 @@ export default function NewTicketPage() {
 
 
 
-
   const fetchUsuarios = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3001/users', {
+      const res = await fetch('http://localhost:3001/api/users', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
       const data = await res.json();
+
+      console.log('Respuesta cruda:', data); // 👈 revisa esto
+
       setUsuarios(data);
     } catch (error) {
       console.error('Error al obtener usuarios:', error);
@@ -91,48 +96,50 @@ export default function NewTicketPage() {
   };
 
 
+
+
+
+
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('No has iniciado sesión');
-      return;
-    }
+  e.preventDefault();
+  const token = localStorage.getItem('token');
+  if (!token) {
+    alert('No has iniciado sesión');
+    return;
+  }
 
-    try {
-      const decoded: any = jwtDecode(token);
-      const creadoPorId =
-        decoded.rol === 'TI' ? usuarioSolicitanteId : decoded.id;
+  try {
+    const decoded: any = jwtDecode(token);
 
-      if (decoded.rol === 'TI' && !usuarioSolicitanteId) {
+    const creadoPorId = Number(decoded.sub); // 👈 Usa sub como ID del creador
+
+    const ticketData: any = {
+      title,
+      description,
+      prioridad,
+      creatorId: creadoPorId, // 👈 ahora es un número correcto
+    };
+
+    // Si el usuario es TI, debe seleccionar un solicitante
+    if (decoded.role.toLowerCase() === 'ti') {
+      if (!usuarioSolicitanteId) {
         alert('Debes seleccionar un usuario solicitante');
         return;
       }
 
-      const ticketData: any = {
-        title,
-        description,
-        prioridad,
-        creadoPorId,
-      };
-
-      // Solo incluye usuarioId si el rol es TI
-      if (decoded.rol === 'TI') {
-        if (!usuarioSolicitanteId) {
-          alert('Debes seleccionar un usuario solicitante');
-          return;
-        }
-        ticketData.usuarioId = usuarioSolicitanteId;
-      }
-
-      await createTicket(ticketData, token);
-      alert('Ticket creado con éxito');
-      router.push('/dashboard');
-    } catch (err) {
-      console.error(err);
-      alert('Error al crear ticket');
+      ticketData.usuarioSolicitanteId = Number(usuarioSolicitanteId); // 👈 asegúrate de que es número
     }
+
+    console.log('Datos que se envían:', ticketData); // ✅ solo aquí, cuando todo esté listo
+    await createTicket(ticketData, token);
+
+    alert('Ticket creado con éxito');
+    router.push('/dashboard');
+  } catch (err) {
+    console.error(err);
+    alert('Error al crear ticket');
   }
+}
 
 
 
@@ -158,24 +165,27 @@ export default function NewTicketPage() {
         />
 
         // Línea que muestra el dropdown para el TI
-        {user?.rol === 'ti' && (
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium">Usuario solicitante</label>
+        {user?.role === 'ti' && (
+          <div>
+            <label className="block mb-1">Usuario solicitante</label>
             <select
               value={usuarioSolicitanteId}
               onChange={(e) => setUsuarioSolicitanteId(e.target.value)}
-              className="w-full border px-3 py-2 rounded"
-              required
+              className="w-full border border-gray-300 rounded px-3 py-2"
             >
-              <option value="">Selecciona un usuario</option>
-              {usuarios.map((u: Usuario) => (
-                <option key={u.id} value={u.id}>
-                  {u.nombre} ({u.email})
+              <option value="">Seleccione un usuario</option>
+              {usuarios.map((usuario) => (
+                <option key={usuario.id} value={usuario.id}>
+                  {usuario.username || usuario.email}
                 </option>
               ))}
             </select>
           </div>
         )}
+
+
+
+
 
 
 

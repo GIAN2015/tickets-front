@@ -59,7 +59,7 @@ export default function TicketStatusChanger({
     try {
       const token = localStorage.getItem('token');
 
-      const res = await fetch(`http://localhost:3001/tickets/${ticketId}`, {
+      const res = await fetch(`http://localhost:3001/api/tickets/${ticketId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

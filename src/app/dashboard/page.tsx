@@ -25,6 +25,7 @@ export default function Dashboard() {
   const ticketId = params?.id;
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<number | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
 
 
   const confirmarResolucion = async (ticketId: number) => {
@@ -62,7 +63,7 @@ export default function Dashboard() {
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    fetch('http://localhost:3001/users', {
+    fetch('http://localhost:3001/api/users', {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())
@@ -89,7 +90,8 @@ export default function Dashboard() {
 
     // Decodifica el token para obtener el rol
     const decoded: any = jwtDecode(token);
-    setUserRole(decoded.role); // Asegúrate que el JWT tiene 'role'
+    setUserRole(decoded.role);
+    setUserId(Number(decoded.sub)); // Asegúrate que el JWT tiene 'role'
 
     getTickets(token)
       .then(setTickets)
@@ -112,15 +114,27 @@ export default function Dashboard() {
           <option value="">Todos</option>
           {usuarios.map((usuario) => (
             <option key={usuario.id} value={usuario.id}>
-              {usuario.nombre || usuario.email}
+              {usuario.username || usuario.email}
             </option>
           ))}
         </select>
       </div>
       <div className="grid grid-cols-1 gap-4">
+
         {tickets
           .filter((ticket: any) => ticket.status !== 'completado')
-          
+          .filter((ticket: any) => {
+            // Mostrar si fue creado por el usuario o solicitado por él
+            return (
+              !usuarioSeleccionado ||
+              ticket.creator?.id === usuarioSeleccionado ||
+              ticket.usuarioSolicitante?.id === usuarioSeleccionado
+            );
+          })
+         
+
+
+
           .map((ticket: any) => (
             <div key={ticket.id} className="p-4 border rounded shadow">
               <h2 className="text-xl font-semibold">{ticket.title}</h2>
@@ -128,9 +142,12 @@ export default function Dashboard() {
               <p className="text-sm text-blue-600">Estado: {ticket.status}</p>
               <p className="text-sm text-red-600">Prioridad: {ticket.prioridad}</p>
               {ticket.creator && (
-                <p className="text-sm text-gray-500">
+                <><p className="text-sm text-gray-500">
                   Creado por: {ticket.creator.username || ticket.creator.email}
-                </p>
+                </p><p className="text-sm text-gray-500">
+                    Solicitante: {ticket.usuarioSolicitante?.username || 'Ninguno'}                  </p></>
+
+
               )}
               <TicketStatusChanger
                 ticketId={ticket.id}

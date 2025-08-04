@@ -16,20 +16,33 @@ interface Ticket {
 export default function TicketsCompletadosPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
+  const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<number | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    fetch('http://localhost:3001/tickets', {
+    fetch('http://localhost:3001/api/tickets', {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     })
+
+
       .then(res => res.json())
       .then(data => {
-        const completados = data.filter((ticket: Ticket) => ticket.status === 'completado');
+        const ticketsArray = Array.isArray(data) ? data : data.tickets;
+
+        if (!Array.isArray(ticketsArray)) {
+          console.error('La respuesta no contiene tickets válidos:', data);
+          return;
+        }
+
+        const completados = ticketsArray.filter((ticket: Ticket) => ticket.status === 'completado');
         setTickets(completados);
         setLoading(false);
       })
+
+
+
       .catch(err => {
         console.error(err);
         setLoading(false);
@@ -40,7 +53,9 @@ export default function TicketsCompletadosPage() {
   if (tickets.length === 0) return <p>No hay tickets completados aún.</p>;
 
   return (
+    
     <ul>
+      
       {tickets.map((ticket) => (
         <li key={ticket.id} className="border p-4 rounded shadow">
           <h2 className="text-lg font-semibold">{ticket.title}</h2>

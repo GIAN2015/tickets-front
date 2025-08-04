@@ -1,7 +1,8 @@
 // src/lib/api.ts
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:3001'; // URL de tu backend NestJS
+const API_BASE = 'http://localhost:3001/api'; // ← Agrega /api al final
+
 
 const instance = axios.create({
   baseURL: API_BASE,
@@ -52,13 +53,21 @@ export async function getTickets(token: string) {
 }
 
 
-export async function createTicket(data: {
-  title: string;
-  description: string;
-  category: string;
-  prioridad: string;
-}, token: string) {
-  const res = await instance.post('/tickets', data);
+export async function createTicket(
+  data: {
+    title: string;
+    description: string;
+    category: string;
+    prioridad: string;
+    usuarioSolicitanteId?: number; // <-- Añadir esto
+  },
+  token: string
+) {
+  const res = await instance.post('/tickets', data, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
   return res.data;
 }
 
@@ -92,7 +101,7 @@ export async function updateTicket(id: number, data: any, token: string) {
 // En src/lib/api.ts
 
 export async function getUsuarios(token: string) {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/usuarios`, {
+  const res = await fetch('http://localhost:3001/api/users', {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -110,7 +119,7 @@ export async function getUsuarios(token: string) {
 export async function confirmarResolucionTicket(ticketId: number) {
   const token = localStorage.getItem('token');
 
-  const res = await instance.patch(`/tickets/${ticketId}/confirmar`, {}, {
+  const res = await instance.patch(`tickets/${ticketId}/confirmar`, {}, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
