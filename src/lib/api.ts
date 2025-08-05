@@ -57,7 +57,7 @@ export async function createTicket(
   data: {
     title: string;
     description: string;
-    category: string;
+    categoria: string;
     prioridad: string;
     usuarioSolicitanteId?: number; // <-- Añadir esto
   },
@@ -151,6 +151,26 @@ export const rechazarResolucionTicket = async (ticketId: number) => {
   );
   if (res.status >= 400) {
     throw new Error('Error al rechazar resolución');
+  }
+
+  return res.data;
+};
+
+export const resetearRechazoResolucion = async (ticketId: number) => {
+  const token = localStorage.getItem('token');
+
+  const res = await instance.patch(
+    `/tickets/${ticketId}/reset-rechazo`, // nueva ruta backend
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (res.status >= 400) {
+    throw new Error('Error al resetear rechazo de resolución');
   }
 
   return res.data;

@@ -1,5 +1,6 @@
 'use client';
 
+import { resetearRechazoResolucion } from '@/lib/api';
 import { useEffect, useState } from 'react';
 
 interface Usuario {
@@ -29,6 +30,8 @@ export default function TicketStatusChanger({
   const [status, setStatus] = useState(currentStatus);
   const [prioridad, setPrioridad] = useState(currentPrioridad);
   const [role, setRole] = useState<string | null>(null);
+  const [showRechazoMessage, setShowRechazoMessage] = useState(rechazadoPorUsuario);
+
 
   // Lista completa de estados
   const allOptions = ['no iniciado', 'asignado', 'en proceso', 'resuelto', 'completado'];
@@ -56,32 +59,41 @@ export default function TicketStatusChanger({
   }, []);
 
   const handleUpdate = async () => {
-    try {
-      const token = localStorage.getItem('token');
+  try {
+    const token = localStorage.getItem('token');
 
-      const res = await fetch(`http://localhost:3001/api/tickets/${ticketId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status, prioridad }),
-      });
+    // Primero reseteamos el rechazo de resolución
+    await resetearRechazoResolucion(ticketId); // Esta función debe actualizar el campo rechazadoPorUsuario a false en el backend
 
-      if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(`Error al actualizar: ${msg}`);
-      }
+    // Luego actualizamos el ticket
+    const res = await fetch(`http://localhost:3001/api/tickets/${ticketId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status, prioridad }),
+    });
 
-      const updated = await res.json();
-      onStatusChanged(updated.status);
-      onPrioridadChanged(updated.prioridad);
-      alert('Ticket actualizado con éxito');
-    } catch (err) {
-      console.error(err);
-      alert('Error al actualizar el ticket');
+    if (!res.ok) {
+      const msg = await res.text();
+      throw new Error(`Error al actualizar: ${msg}`);
     }
-  };
+
+    const updated = await res.json();
+
+    // Actualizamos estado local y ocultamos el mensaje de rechazo
+    onStatusChanged(updated.status);
+    onPrioridadChanged(updated.prioridad);
+    setShowRechazoMessage(false); // Asegura que desaparezca el mensaje en pantalla
+
+    alert('Ticket actualizado con éxito');
+  } catch (err) {
+    console.error(err);
+    alert('Error al actualizar el ticket');
+  }
+};
+
 
   if (!role || role !== 'ti') return null;
 

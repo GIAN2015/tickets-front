@@ -141,6 +141,7 @@ export default function Dashboard() {
               <p className="text-gray-600">{ticket.description}</p>
               <p className="text-sm text-blue-600">Estado: {ticket.status}</p>
               <p className="text-sm text-red-600">Prioridad: {ticket.prioridad}</p>
+              <p className="text-sm text-green-600">Categoría: {ticket.categoria}</p>
               {ticket.creator && (
                 <><p className="text-sm text-gray-500">
                   Creado por: {ticket.creator.username || ticket.creator.email}

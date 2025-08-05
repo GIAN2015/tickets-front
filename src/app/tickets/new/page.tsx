@@ -28,7 +28,14 @@ export default function NewTicketPage() {
   const [estado, setEstado] = useState('Pendiente');
   const [role, setRole] = useState('');
   const [user, setUser] = useState<DecodedUser | null>(null);
-
+  const categorias = [
+    { label: 'Mantenimiento', value: 'mantenimiento' },
+    { label: 'Hardware', value: 'hardware' },
+    { label: 'Software', value: 'software' },
+    { label: 'Redes', value: 'redes' },
+    { label: 'Otros', value: 'otros' },
+  ];
+  const [categoria, setCategoria] = useState('mantenimiento');
 
 
 
@@ -101,45 +108,46 @@ export default function NewTicketPage() {
 
 
   async function handleSubmit(e: React.FormEvent) {
-  e.preventDefault();
-  const token = localStorage.getItem('token');
-  if (!token) {
-    alert('No has iniciado sesión');
-    return;
-  }
-
-  try {
-    const decoded: any = jwtDecode(token);
-
-    const creadoPorId = Number(decoded.sub); // 👈 Usa sub como ID del creador
-
-    const ticketData: any = {
-      title,
-      description,
-      prioridad,
-      creatorId: creadoPorId, // 👈 ahora es un número correcto
-    };
-
-    // Si el usuario es TI, debe seleccionar un solicitante
-    if (decoded.role.toLowerCase() === 'ti') {
-      if (!usuarioSolicitanteId) {
-        alert('Debes seleccionar un usuario solicitante');
-        return;
-      }
-
-      ticketData.usuarioSolicitanteId = Number(usuarioSolicitanteId); // 👈 asegúrate de que es número
+    e.preventDefault();
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('No has iniciado sesión');
+      return;
     }
 
-    console.log('Datos que se envían:', ticketData); // ✅ solo aquí, cuando todo esté listo
-    await createTicket(ticketData, token);
+    try {
+      const decoded: any = jwtDecode(token);
 
-    alert('Ticket creado con éxito');
-    router.push('/dashboard');
-  } catch (err) {
-    console.error(err);
-    alert('Error al crear ticket');
+      const creadoPorId = Number(decoded.sub); // 👈 Usa sub como ID del creador
+
+      const ticketData: any = {
+        title,
+        description,
+        prioridad,
+        categoria,
+        creatorId: creadoPorId, // 👈 ahora es un número correcto
+      };
+
+      // Si el usuario es TI, debe seleccionar un solicitante
+      if (decoded.role.toLowerCase() === 'ti') {
+        if (!usuarioSolicitanteId) {
+          alert('Debes seleccionar un usuario solicitante');
+          return;
+        }
+
+        ticketData.usuarioSolicitanteId = Number(usuarioSolicitanteId); // 👈 asegúrate de que es número
+      }
+
+      console.log('Datos que se envían:', ticketData); // ✅ solo aquí, cuando todo esté listo
+      await createTicket(ticketData, token);
+
+      alert('Ticket creado con éxito');
+      router.push('/dashboard');
+    } catch (err) {
+      console.error(err);
+      alert('Error al crear ticket');
+    }
   }
-}
 
 
 
@@ -163,7 +171,17 @@ export default function NewTicketPage() {
           required
           className="w-full border px-3 py-2 rounded h-24"
         />
-
+        <select
+          value={categoria}
+          onChange={(e) => setCategoria(e.target.value)}
+          className="w-full p-2 border rounded"
+        >
+          {categorias.map((cat) => (
+            <option key={cat.value} value={cat.value}>
+              {cat.label}
+            </option>
+          ))}
+        </select>
         // Línea que muestra el dropdown para el TI
         {user?.role === 'ti' && (
           <div>
