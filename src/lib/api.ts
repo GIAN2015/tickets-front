@@ -55,6 +55,7 @@ export async function getTickets(token: string) {
 
 export async function createTicket(
   data: {
+  
     title: string;
     description: string;
     categoria: string;

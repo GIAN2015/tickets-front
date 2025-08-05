@@ -2,7 +2,7 @@
 
 import { resetearRechazoResolucion } from '@/lib/api';
 import { useEffect, useState } from 'react';
-
+import emailjs from '@emailjs/browser';
 interface Usuario {
   id: number;
   nombre: string;
@@ -32,6 +32,10 @@ export default function TicketStatusChanger({
   const [role, setRole] = useState<string | null>(null);
   const [showRechazoMessage, setShowRechazoMessage] = useState(rechazadoPorUsuario);
 
+  
+  // Correo del solicitante
+  
+
 
   // Lista completa de estados
   const allOptions = ['no iniciado', 'asignado', 'en proceso', 'resuelto', 'completado'];
@@ -59,40 +63,63 @@ export default function TicketStatusChanger({
   }, []);
 
   const handleUpdate = async () => {
-  try {
-    const token = localStorage.getItem('token');
+    try {
+      const token = localStorage.getItem('token');
 
-    // Primero reseteamos el rechazo de resolución
-    await resetearRechazoResolucion(ticketId); // Esta función debe actualizar el campo rechazadoPorUsuario a false en el backend
+      // Primero reseteamos el rechazo de resolución
+      await resetearRechazoResolucion(ticketId); // Esta función debe actualizar el campo rechazadoPorUsuario a false en el backend
 
-    // Luego actualizamos el ticket
-    const res = await fetch(`http://localhost:3001/api/tickets/${ticketId}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ status, prioridad }),
-    });
+      // Luego actualizamos el ticket
+      const res = await fetch(`http://localhost:3001/api/tickets/${ticketId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status, prioridad }),
+      });
 
-    if (!res.ok) {
-      const msg = await res.text();
-      throw new Error(`Error al actualizar: ${msg}`);
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(`Error al actualizar: ${msg}`);
+      }
+
+      const updated = await res.json();
+      // Enviar correo al usuario solicitante
+ 
+
+      // Enviar correo al creador del ticket
+   
+
+      // Actualizamos estado local y ocultamos el mensaje de rechazo
+      onStatusChanged(updated.status);
+      onPrioridadChanged(updated.prioridad);
+      setShowRechazoMessage(false); // Asegura que desaparezca el mensaje en pantalla
+
+      // const emailTo = '{{}}'; // puedes traer esto del usuario creador o solicitante
+
+      // const templateParams = {
+      //   email: emailTo,
+      //   subject: 'Actualización de estado de ticket',
+      //   ticket_id: ticketId,
+      //   new_status: updated.status,
+      //   prioridad: updated.prioridad,
+      //   fecha: new Date().toLocaleString(),
+      // };
+
+      // await emailjs.send(
+      //   'service_abc123',
+      //   'template_qxfh3l4', // 👈 tu nuevo template aquí
+      //   templateParams,
+      //   'FBQ9PmnOeJKELISx3'
+      // );
+
+      alert('Ticket actualizado con éxito y correo enviado');
+    } catch (err) {
+      console.error(err);
+      alert('Error al actualizar el ticket');
     }
-
-    const updated = await res.json();
-
-    // Actualizamos estado local y ocultamos el mensaje de rechazo
-    onStatusChanged(updated.status);
-    onPrioridadChanged(updated.prioridad);
-    setShowRechazoMessage(false); // Asegura que desaparezca el mensaje en pantalla
-
-    alert('Ticket actualizado con éxito');
-  } catch (err) {
-    console.error(err);
-    alert('Error al actualizar el ticket');
-  }
-};
+  };
 
 
   if (!role || role !== 'ti') return null;

@@ -1,4 +1,5 @@
 'use client';
+import router from 'next/router';
 import { ReactNode, useEffect, useState } from 'react';
 
 interface Ticket {
@@ -50,31 +51,56 @@ export default function TicketsCompletadosPage() {
   }, []);
 
   if (loading) return <p>Cargando tickets completados...</p>;
-  if (tickets.length === 0) return <p>No hay tickets completados aún.</p>;
+  if (tickets.length === 0) return (
+<div>   <p>No hay tickets completados.</p>
+<a href='/dashboard' >
+    <button
+   
+      className="mb-6 inline-flex items-center text-green-700 hover:text-green-900 font-medium transition"
+    >
+      ← Volver a mis tickets
+    </button></a> </div>)
+  
+    ;
 
   return (
-    
-    <ul>
-      
-      {tickets.map((ticket) => (
-        <li key={ticket.id} className="border p-4 rounded shadow">
-          <h2 className="text-lg font-semibold">{ticket.title}</h2>
-          <p className="text-sm text-gray-600">{ticket.description}</p>
-          <p className="text-sm text-green-600">Estado: {ticket.status}</p>
-          <p className="text-sm">Prioridad: {ticket.prioridad}</p>
-          <p className="text-sm text-gray-500">
-            Creado por: {ticket.creator?.username || ticket.creator?.email}
-          </p>
-          <p className="text-sm text-blue-500">
-            Fecha de inicio: {new Date(ticket.createdAt).toLocaleString()}
-          </p>
-          {ticket.status === 'completado' && (
-            <p className="text-sm text-purple-600">
-              Fecha de completado: {new Date(ticket.updatedAt).toLocaleString()}
-            </p>
-          )}
-        </li>
-      ))}
-    </ul>
+    <div className="max-w-4xl mx-auto mt-10 p-6 bg-white rounded-xl shadow-md border">
+      {/* Botón de volver */}
+      <a href='/dashboard'>
+      <button
+        type="button"
+       
+        className="mb-6 inline-flex items-center text-green-700 hover:text-green-900 font-medium transition"
+      >
+        ← Volver al Dashboard
+      </button></a>
+
+      <h1 className="text-2xl font-bold text-black mb-4">📋 Lista de Tickets</h1>
+
+      <ul className="space-y-4">
+        {tickets.map((ticket) => (
+          <li key={ticket.id} className="border border-gray-200 p-5 rounded-lg shadow-sm">
+            <h2 className="text-xl font-semibold text-black">{ticket.title}</h2>
+            <p className="text-sm text-black mt-1">{ticket.description}</p>
+
+            <div className="mt-2 text-sm space-y-1">
+              <p className="text-green-600">Estado: <span className="font-medium">{ticket.status}</span></p>
+              <p className="text-black">Prioridad: <span className="font-medium">{ticket.prioridad}</span></p>
+              <p className="text-black">
+                Creado por: <span className="font-medium">{ticket.creator?.username || ticket.creator?.email}</span>
+              </p>
+              <p className="text-blue-600">
+                Fecha de inicio: <span className="font-medium">{new Date(ticket.createdAt).toLocaleString()}</span>
+              </p>
+              {ticket.status === 'completado' && (
+                <p className="text-purple-600">
+                  Fecha de completado: <span className="font-medium">{new Date(ticket.updatedAt).toLocaleString()}</span>
+                </p>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
