@@ -27,6 +27,19 @@ export default function Dashboard() {
   const [userId, setUserId] = useState<number | null>(null);
   const [estadoSeleccionado, setEstadoSeleccionado] = useState<string | null>(null);
   const router = useRouter();
+  const [tipoSeleccionado, setTipoSeleccionado] = useState<string | null>(null);
+  const [busqueda, setBusqueda] = useState('');
+  const [busquedaAplicada, setBusquedaAplicada] = useState('');
+
+  // 📄 Paginación
+  const [paginaActual, setPaginaActual] = useState(1);
+  const ticketsPorPagina = 10;
+  const tipos = [
+    { label: 'Todos', value: null },
+    { label: 'Requerimiento', value: 'requerimiento' },
+    { label: 'Incidencia', value: 'incidencia' },
+    { label: 'Consulta', value: 'consulta' }
+  ];
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -106,10 +119,34 @@ export default function Dashboard() {
   }, []);
 
 
+  const ticketsFiltrados = tickets
+    .filter((ticket: any) => !estadoSeleccionado || ticket.status === estadoSeleccionado)
+    .filter((ticket: any) => ticket.status !== 'completado')
+    .filter((ticket: any) => !tipoSeleccionado || ticket.tipo === tipoSeleccionado)
+    .filter((ticket: any) =>
+      !usuarioSeleccionado ||
+      ticket.creator?.id === usuarioSeleccionado ||
+      ticket.usuarioSolicitante?.id === usuarioSeleccionado
+    )
+    .filter((ticket: any) =>
+      !busquedaAplicada ||
+      ticket.title.toLowerCase().includes(busquedaAplicada.toLowerCase()) ||
+      String(ticket.id).includes(busquedaAplicada)
+    )
+    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  // 📄 Paginación lógica
+  const indiceInicio = (paginaActual - 1) * ticketsPorPagina;
+  const indiceFinal = indiceInicio + ticketsPorPagina;
+  const ticketsPaginados = ticketsFiltrados.slice(indiceInicio, indiceFinal);
+
+  const totalPaginas = Math.ceil(ticketsFiltrados.length / ticketsPorPagina);
 
   return (
+    
     <div className="p-8 max-w-7xl mx-auto text-white">
       {/* Botón de logout */}
+      
       <button
         onClick={handleLogout}
         className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition duration-200 shadow-md mb-6"
@@ -183,9 +220,42 @@ export default function Dashboard() {
           </select>
         </div>
       </div>
+      {/* Buscador con botón */}
+      <div className="flex flex-col">
+        <label>🔍 Buscar (ID o título):</label>
+        <div className="flex">
+          <input
+            type="text"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            className="border border-gray-500 rounded-l px-3 py-2 text-black"
+          />
+          <button
+            onClick={() => { setBusquedaAplicada(busqueda); setPaginaActual(1); }}
+            className="bg-blue-600 hover:bg-blue-700 px-4 rounded-r"
+          >
+            🔍
+          </button>
+        </div>
+      </div>
 
       {/* Tabla de Tickets */}
       <div className="overflow-x-auto">
+        <div className="flex gap-1  border-b border-gray-600">
+          {tipos.map((t) => (
+            <button
+              key={t.label}
+              onClick={() => setTipoSeleccionado(t.value)}
+              className={`px-4 py-2 rounded-t-md transition-colors ${tipoSeleccionado === t.value
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
         <table className="min-w-full bg-gray-800 text-white border border-gray-600 rounded-lg">
           <thead>
             <tr className="bg-gray-700 text-left">
@@ -193,17 +263,23 @@ export default function Dashboard() {
               <th className="px-4 py-2 border border-gray-600">Título</th>
               <th className="px-4 py-2 border border-gray-600">Descripción</th>
               <th className="px-4 py-2 border border-gray-600">Estado</th>
+
               <th className="px-4 py-2 border border-gray-600">Prioridad</th>
+              <th className="px-4 py-2 border border-gray-600">Tipo</th>
               <th className="px-4 py-2 border border-gray-600">Categoría</th>
               <th className="px-4 py-2 border border-gray-600">Creador</th>
+
               <th className="px-4 py-2 border border-gray-600">Solicitante</th>
               <th className="px-4 py-2 border border-gray-600">Acciones</th>
             </tr>
           </thead>
           <tbody>
+            
             {tickets
               .filter((ticket: any) => !estadoSeleccionado || ticket.status === estadoSeleccionado)
               .filter((ticket: any) => ticket.status !== 'completado')
+              .filter((ticket: any) => !tipoSeleccionado || ticket.tipo === tipoSeleccionado)
+
               .filter((ticket: any) =>
                 !usuarioSeleccionado ||
                 ticket.creator?.id === usuarioSeleccionado ||
@@ -213,10 +289,16 @@ export default function Dashboard() {
               .map((ticket: any, index: number) => (
                 <tr key={ticket.id} className="border-t border-gray-700">
                   <td className="px-4 py-2">{index + 1}</td>
-                  <td className="px-4 py-2">{ticket.title}</td>
+                  <td className="px-4 py-2">  <Link
+                    href={`/tickets/${ticket.id}`}
+                    className="text-blue-400 hover:underline cursor-pointer"
+                  >
+                    {ticket.title}
+                  </Link></td>
                   <td className="px-4 py-2">{ticket.description}</td>
                   <td className="px-4 py-2">{ticket.status}</td>
                   <td className="px-4 py-2">{ticket.prioridad}</td>
+                  <td className="px-4 py-2">{ticket.tipo}</td>
                   <td className="px-4 py-2">{ticket.categoria}</td>
                   <td className="px-4 py-2">
                     {ticket.creator?.username || ticket.creator?.email}
@@ -242,6 +324,8 @@ export default function Dashboard() {
                         );
                       }}
                     />
+
+
                     {userRole === 'user' &&
                       ticket.status === 'resuelto' &&
                       !ticket.confirmadoPorUsuario && (
@@ -252,12 +336,18 @@ export default function Dashboard() {
                           >
                             ✅ Confirmar
                           </button>
-                          <button
-                            onClick={() => rechazarResolucion(ticket.id)}
-                            className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs"
-                          >
-                            ❌ Rechazar
-                          </button>
+                          {!ticket.rechazadoPorUsuario && (
+                            <button
+                              onClick={() => rechazarResolucion(ticket.id)}
+                              className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs"
+                            >
+                              ❌ Rechazar
+                            </button>
+                          )}
+
+
+
+
                         </div>
                       )}
                   </td>

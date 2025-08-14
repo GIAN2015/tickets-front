@@ -53,33 +53,27 @@ export async function getTickets(token: string) {
 }
 
 
-export async function createTicket(
-  data: {
-  
-    title: string;
-    description: string;
-    categoria: string;
-    prioridad: string;
-    usuarioSolicitanteId?: number; // <-- Añadir esto
-  },
-  token: string
-) {
-  const res = await instance.post('/tickets', data, {
+export async function createTicket(formData: FormData, token: string) {
+  const response = await fetch('http://localhost:3001/api/tickets', {
+    method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
     },
+    body: formData,
   });
-  return res.data;
+
+  if (!response.ok) {
+    throw new Error('Error al crear ticket');
+  }
+
+  return await response.json();
 }
 
-export async function getTicketHistory(ticketId: number) {
-  const res = await instance.get(`/tickets/${ticketId}/history`);
-  return res.data;
-}
+
 
 // lib/api.ts
 export async function updateTicket(id: number, data: any, token: string) {
-  const response = await fetch(`http://localhost:3001/tickets/${id}`, {
+  const response = await fetch(`http://localhost:3001/api/tickets/${id}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -97,9 +91,7 @@ export async function updateTicket(id: number, data: any, token: string) {
   return response.json();
 }
 
-// lib/api.ts
-// lib/api.ts
-// En src/lib/api.ts
+
 
 export async function getUsuarios(token: string) {
   const res = await fetch('http://localhost:3001/api/users', {
@@ -135,6 +127,11 @@ export async function confirmarResolucionTicket(ticketId: number) {
   return res.data;
 }
 
+export async function getTicketHistory(id: number) {
+  const res = await instance.get(`/tickets/${id}/historial`);
+  return res.data;
+}
+
 
 
 
@@ -157,6 +154,7 @@ export const rechazarResolucionTicket = async (ticketId: number) => {
   return res.data;
 };
 
+
 export const resetearRechazoResolucion = async (ticketId: number) => {
   const token = localStorage.getItem('token');
 
@@ -177,5 +175,9 @@ export const resetearRechazoResolucion = async (ticketId: number) => {
   return res.data;
 };
 
+export async function getTicketById(ticketId: number | string) {
+  const res = await instance.get(`/tickets/${ticketId}`);
+  return res.data;
+}
 
 

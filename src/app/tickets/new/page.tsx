@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { createTicket, getUsuarios } from '@/lib/api';
 import { jwtDecode } from 'jwt-decode';
 import emailjs from '@emailjs/browser';
+
+
 interface DecodedUser {
   id: number;
   role: 'user' | 'ti' | 'admin'; // ajusta si hay más roles
@@ -39,7 +41,14 @@ export default function NewTicketPage() {
   ];
 
   const [categoria, setCategoria] = useState('mantenimiento');
-  const [file, setFile] = useState<File | null>(null);
+  const [archivo, setFile] = useState<File | null>(null);
+  const [tipo, setTipo] = useState<'requerimiento' | 'incidencia' | 'consulta'>('incidencia');
+
+  const tipos = [
+    { label: '📌 Requerimiento', value: 'requerimiento' },
+    { label: '⚠ Incidencia', value: 'incidencia' },
+    { label: '💬 Consulta', value: 'consulta' },
+  ];
 
 
 
@@ -121,39 +130,36 @@ export default function NewTicketPage() {
 
     try {
       const decoded: any = jwtDecode(token);
+      const creadoPorId = Number(decoded.sub);
 
-      const creadoPorId = Number(decoded.sub); // 👈 Usa sub como ID del creador
+      // Usa FormData en lugar de ticketData plano
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('description', description);
+      formData.append('prioridad', prioridad);
+      formData.append('categoria', categoria);
+      formData.append('tipo', tipo); // valor fijo
+      formData.append('creatorId', String(creadoPorId)); // no usado directamente en el backend, pero por si acaso
 
-      const ticketData: any = {
-        title,
-        description,
-        prioridad,
-        categoria,
-        creatorId: creadoPorId, // 👈 ahora es un número correcto
-      };
-
-      if (file) {
-        const formData = new FormData();
-        formData.append('archivo', file); // nombre del campo que tu backend espera
-        // Aquí puedes usar formData para enviar el archivo si tu backend lo espera
-        // Por ejemplo: await createTicket(formData, token);
+      if (archivo) { // archivo es tu useState para file
+        formData.append('archivo', archivo);
       }
-      // Si el usuario es TI, debe seleccionar un solicitante
+
       if (decoded.role.toLowerCase() === 'ti') {
         if (!usuarioSolicitanteId) {
           alert('Debes seleccionar un usuario solicitante');
           return;
         }
-
-        ticketData.usuarioSolicitanteId = Number(usuarioSolicitanteId); // 👈 asegúrate de que es número
+        formData.append('usuarioSolicitanteId', usuarioSolicitanteId);
       }
 
-      console.log('Datos que se envían:', ticketData);
-      await createTicket(ticketData, token);
-      const nuevoTicket = await createTicket(ticketData, token);
+      // ✅ Llamada con FormData correctamente
+      const nuevoTicket = await createTicket(formData, token);
 
 
-      const fechaActual = new Date().toLocaleString();
+
+
+
 
       // const templateParams = {
       //   id: nuevoTicket.id,
@@ -286,6 +292,21 @@ export default function NewTicketPage() {
             className="w-full text-black"
           />
         </div>
+        <div>
+  <label className="block font-medium text-black mb-1">🗂 Tipo de Ticket</label>
+  <select
+    value={tipo}
+    onChange={(e) => setTipo(e.target.value as 'requerimiento' | 'incidencia' | 'consulta')}
+    className="w-full border border-gray-300 px-4 py-2 rounded-md focus:ring-2 focus:ring-green-500 outline-none text-black"
+  >
+    {tipos.map((t) => (
+      <option key={t.value} value={t.value}>
+        {t.label}
+      </option>
+    ))}
+  </select>
+</div>
+
 
         <button
           type="submit"
