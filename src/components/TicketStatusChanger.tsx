@@ -1,8 +1,9 @@
 'use client';
 
-import { resetearRechazoResolucion } from '@/lib/api';
+import { getUsuarios, resetearRechazoResolucion } from '@/lib/api';
 import { useEffect, useState } from 'react';
 import emailjs from '@emailjs/browser';
+import { title } from 'process';
 interface Usuario {
   id: number;
   nombre: string;
@@ -11,6 +12,7 @@ interface Usuario {
 }
 
 export default function TicketStatusChanger({
+  ticket,
   ticketId,
   currentStatus,
   currentPrioridad,
@@ -22,6 +24,7 @@ export default function TicketStatusChanger({
   refreshHistorial,
 
 }: {
+  ticket: any;
   ticketId: number;
   message: string;
   currentStatus: string;
@@ -38,7 +41,8 @@ export default function TicketStatusChanger({
   const [showRechazoMessage, setShowRechazoMessage] = useState(rechazadoPorUsuario);
   const [rechazadoLocal, setRechazadoLocal] = useState(rechazadoPorUsuario);
   const [archivo, setArchivo] = useState<File | null>(null);
-  // Correo del solicitante
+  const [dbStatus, setDbStatus] = useState(currentStatus);
+
 
 
 
@@ -68,6 +72,9 @@ export default function TicketStatusChanger({
     if (storedRole === 'ti' || storedRole === 'user') {
       setRole(storedRole);
     }
+  }, []);
+  useEffect(() => {
+    emailjs.init("Ofs_itQDgy3lq5I9T"); // 👈 pega tu public key aquí
   }, []);
 
   const handleUpdate = async () => {
@@ -124,24 +131,39 @@ export default function TicketStatusChanger({
       setShowRechazoMessage(false);
 
 
+      const destinatarioSolicitante = updated.usuarioSolicitante?.email;
+      const destinatarioCreador = updated.creator?.email;
+      const destinatarioActualizador = updated.actualizadoPor?.email;
 
-      // const emailTo = '{{}}'; // puedes traer esto del usuario creador o solicitante
+      // unir los correos válidos
+      const destinatarios = [destinatarioSolicitante, destinatarioCreador, destinatarioActualizador]
+        .filter(Boolean) // quita los undefined/null
+        .join(","); // EmailJS acepta lista separada por coma
 
-      // const templateParams = {
-      //   email: emailTo,
-      //   subject: 'Actualización de estado de ticket',
-      //   ticket_id: ticketId,
-      //   new_status: updated.status,
-      //   prioridad: updated.prioridad,
-      //   fecha: new Date().toLocaleString(),
-      // };
+      console.log("📧 Enviando correo a:", destinatarios);
+      console.log("📧 Actualizado por:", destinatarioActualizador);
 
-      // await emailjs.send(
-      //   'service_abc123',
-      //   'template_qxfh3l4', // 👈 tu nuevo template aquí
-      //   templateParams,
-      //   'FBQ9PmnOeJKELISx3'
-      // );
+      if (!destinatarios) {
+        console.warn(`⚠️ Ticket ${updated.id} no tiene emails válidos, no se envía`);
+        return;
+      }
+
+      await emailjs.send("service_abc123", "template_qxfh3l4", {
+        title: updated.title,
+        to_email: destinatarios,
+        ticket_id: updated.id,
+        nuevo_estado: updated.status,
+        prioridad: updated.prioridad,
+        mensaje: updated.message ?? "",
+        fecha: new Date().toLocaleString(),
+      });
+      // actualizas estados locales
+      onStatusChanged?.(updated.status);
+      onPrioridadChanged?.(updated.prioridad);
+
+
+
+
       window.location.reload();
       alert('Ticket actualizado con éxito y correo enviado');
     } catch (err) {
@@ -196,26 +218,26 @@ export default function TicketStatusChanger({
       )}
 
       {/* Archivo adjunto y Guardar Cambios para TODOS */}
-     {/* Archivo adjunto y Guardar Cambios solo si NO está completado */}
-    {status !== 'completado' && (
-      <>
-        <label className="block mt-4 mb-2">
-          <span className="text-sm">Archivo adjunto:</span>
-          <input
-            type="file"
-            onChange={(e) => setArchivo(e.target.files ? e.target.files[0] : null)}
-            className="mt-1"
-          />
-        </label>
+      {/* Archivo adjunto y Guardar Cambios solo si NO está completado */}
+      {dbStatus !== 'completado' && (
+        <>
+          <label className="block mt-4 mb-2">
+            <span className="text-sm">Archivo adjunto:</span>
+            <input
+              type="file"
+              onChange={(e) => setArchivo(e.target.files ? e.target.files[0] : null)}
+              className="mt-1"
+            />
+          </label>
 
-        <button
-          onClick={handleUpdate}
-          className="bg-green-600 text-white px-3 py-1 rounded mt-2"
-        >
-          Guardar Cambios
-        </button>
-      </>
-    )}
+          <button
+            onClick={handleUpdate}
+            className="bg-green-600 text-white px-3 py-1 rounded mt-2"
+          >
+            Guardar Cambios
+          </button>
+        </>
+      )}
     </>
   );
 

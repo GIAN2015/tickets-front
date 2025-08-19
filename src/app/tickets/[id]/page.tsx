@@ -109,136 +109,122 @@ export default function TicketDetailPage() {
   if (!ticket) return <p className="text-red-500 p-8">Ticket no encontrado</p>;
 
   return (
-    <div className="max-w-4xl mx-auto p-8 text-white">
-      <h1 className="text-3xl font-bold mb-4">🎫 {ticket.title}</h1>
-      <p className="mb-2"><strong>Código del ticket:</strong> {ticket.id}</p>
-      <p className="mb-2"><strong>Descripción:</strong> {ticket.description}</p>
-      <p className="mb-2"><strong>Estado:</strong> {ticket.status}</p>
-      <p className="mb-2"><strong>Prioridad:</strong> {ticket.prioridad}</p>
-      <p className="mb-2"><strong>Tipo:</strong> {ticket.tipo}</p>
-      <p className="mb-2"><strong>Categoría:</strong> {ticket.categoria}</p>
-      <p className="mb-2"><strong>Solicitante:</strong> {ticket.usuarioSolicitante?.username || 'Ninguno'}</p>
-      <p className="mb-2"><strong>Creador:</strong> {ticket.creator?.username || ticket.creator?.email}</p>
+    <div className="max-w-5xl mx-auto p-8 text-white space-y-6">
+      {/* Sección principal del ticket */}
+      <div className="bg-gray-900 p-6 rounded-2xl shadow-xl border border-gray-700">
+        <h1 className="text-3xl md:text-4xl font-bold mb-4 text-green-400">🎫 {ticket.title}</h1>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-200">
+          <p><strong>Código:</strong> {ticket.id}</p>
+          <p><strong>Estado:</strong> {ticket.status}</p>
+          <p><strong>Prioridad:</strong> {ticket.prioridad}</p>
+          <p><strong>Tipo:</strong> {ticket.tipo}</p>
+          <p><strong>Categoría:</strong> {ticket.categoria}</p>
+          <p><strong>Solicitante:</strong> {ticket.usuarioSolicitante?.username || 'Ninguno'}</p>
+          <p><strong>Creador:</strong> {ticket.creator?.username || ticket.creator?.email}</p>
+        </div>
+        <p className="mt-4 text-gray-300"><strong>Descripción:</strong> {ticket.description}</p>
 
-      {/* Input para mensaje */}
-      {ticket.status !== "completado" && (
-        <label className="block mt-4 mb-2">
-          <span className="text-sm">Mensaje:</span>
-          <input
-            value={mensaje}
-            onChange={(e) => setMensaje(e.target.value)}
-            className="bg-gray-800 text-white p-2 rounded w-full mt-1"
-            type="text"
-            placeholder="Escribe un mensaje para el ticket"
-          />
-        </label>
-      )}
+        {/* Input de mensaje */}
+        {ticket.status !== "completado" && (
+          <label className="block mt-6">
+            <span className="text-sm text-gray-300">Mensaje:</span>
+            <input
+              value={mensaje}
+              onChange={(e) => setMensaje(e.target.value)}
+              className="bg-gray-800 text-white p-3 rounded-lg w-full mt-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-green-500 transition"
+              type="text"
+              placeholder="Escribe un mensaje para el ticket"
+            />
+          </label>
+        )}
 
+        <TicketStatusChanger
+          ticketId={ticket.id}
+          currentStatus={ticket.status}
+          currentPrioridad={ticket.prioridad}
+          confirmadoPorUsuario={ticket.confirmadoPorUsuario}
+          rechazadoPorUsuario={ticket.rechazadoPorUsuario}
+          onStatusChanged={(newStatus) => setTicket((prev) => ({ ...prev, status: newStatus }))}
+          onPrioridadChanged={(newPrioridad) => setTicket((prev) => ({ ...prev, prioridad: newPrioridad }))}
+          message={mensaje}
+        />
 
-      <TicketStatusChanger
-        ticketId={ticket.id}
-        currentStatus={ticket.status}
-        currentPrioridad={ticket.prioridad}
-        confirmadoPorUsuario={ticket.confirmadoPorUsuario}
-        rechazadoPorUsuario={ticket.rechazadoPorUsuario}
-        onStatusChanged={(newStatus) => {
-          setTicket((prev) => ({ ...prev, status: newStatus }));
-        }}
-        onPrioridadChanged={(newPrioridad) => {
-          setTicket((prev) => ({ ...prev, prioridad: newPrioridad }));
-        }}
-        message={mensaje} // <-- asegúrate de que el componente lo reciba
+        {/* Archivo adjunto */}
+        {ticket.archivoNombre && (
+          <a
+            href={`http://localhost:3001/tickets/${ticket.archivoNombre}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-400 underline mt-4 inline-block hover:text-blue-300 transition"
+          >
+            📎 Ver archivo adjunto
+          </a>
+        )}
 
-      />
-
-      {/* Archivo adjunto */}
-      {ticket.archivoNombre && (
-        <a
-          href={`http://localhost:3001/tickets/${ticket.archivoNombre}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-500 underline mt-4 block"
-        >
-          Ver archivo adjunto
-        </a>
-      )}
-
-      {/* Botones de usuario */}
-      {userRole === 'user' &&
-        ticket.status === 'resuelto' &&
-        !ticket.confirmadoPorUsuario && (
-          <div className="flex flex-col gap-2 mt-6">
+        {/* Botones de usuario */}
+        {userRole === 'user' && ticket.status === 'resuelto' && !ticket.confirmadoPorUsuario && (
+          <div className="flex flex-col sm:flex-row gap-4 mt-6">
             <button
               onClick={() => confirmarResolucion(ticket.id)}
-              className="bg-green-600 hover:bg-green-700 text-white px-2 py-1 rounded text-sm"
+              className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow-md transition transform hover:scale-105"
             >
               ✅ Confirmar resolución
             </button>
             {!ticket.rechazadoPorUsuario && (
               <button
                 onClick={() => rechazarResolucion(ticket.id)}
-                className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs"
+                className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg shadow-md transition transform hover:scale-105"
               >
                 ❌ Rechazar
               </button>
             )}
-
           </div>
         )}
+      </div>
 
-      <div className="mt-6 bg-gray-900 text-white p-4 rounded-xl shadow-md">
-        <h2 className="text-xl font-bold mb-3">📜 Historial de cambios</h2>
+      {/* Historial de cambios */}
+      <div className="bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-700">
+        <h2 className="text-2xl font-bold mb-4 text-green-300">📜 Historial de cambios</h2>
         {historial.length === 0 ? (
-          <p>No hay historial aún.</p>
+          <p className="text-gray-400">No hay historial aún.</p>
         ) : (
-          <ul className="space-y-3">
+          <ul className="space-y-4">
             {historial.map((h) => (
-              <li key={h.id} className="border-b border-gray-700 pb-2">
-                <div>🕒 <strong>{new Date(h.fecha).toLocaleString()}</strong></div>
-                <div>👤 Actualizado por: <strong>{h.actualizadoPor?.username || 'Usuario desconocido'}</strong></div>
-
-                {/* Estado siempre visible */}
-                <div>
+              <li key={h.id} className="bg-gray-900 p-4 rounded-xl shadow-sm border border-gray-700 transition hover:bg-gray-950">
+                <div className="text-gray-200 mb-1">🕒 <strong>{new Date(h.fecha).toLocaleString()}</strong></div>
+                <div className="text-gray-200 mb-1">👤 Actualizado por: <strong>{h.actualizadoPor?.username || 'Usuario desconocido'}</strong></div>
+                <div className="mb-1">
                   🔁 Estado:{" "}
                   {h.statusAnterior && h.statusNuevo && h.statusAnterior !== h.statusNuevo
                     ? <><strong>{h.statusAnterior}</strong> → <strong>{h.statusNuevo}</strong></>
                     : <strong>{h.statusNuevo || h.statusAnterior || ticket.status}</strong>
                   }
                 </div>
-
-                {/* Prioridad siempre visible */}
-                <div>
+                <div className="mb-1">
                   ⚙️ Prioridad:{" "}
                   {h.prioridadAnterior && h.prioridadNueva && h.prioridadAnterior !== h.prioridadNueva
                     ? <><strong>{h.prioridadAnterior}</strong> → <strong>{h.prioridadNueva}</strong></>
                     : <strong>{h.prioridadNueva || h.prioridadAnterior || ticket.prioridad}</strong>
                   }
                 </div>
-
-                {h.mensaje && (
-                  <p>💬 Mensaje: <span className="italic text-gray-300">{h.mensaje}</span></p>
-                )}
-
+                {h.mensaje && <p className="italic text-gray-400 mb-1">💬 {h.mensaje}</p>}
                 {h.adjuntoNombre && (
                   <a
                     href={`http://localhost:3001/tickets/${h.adjuntoNombre}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-400 underline mt-2 inline-block"
+                    className="text-blue-400 underline hover:text-blue-300 transition"
                   >
                     📎 Ver archivo adjunto
                   </a>
                 )}
               </li>
             ))}
-
-
-
           </ul>
         )}
       </div>
-
     </div>
   );
 }
+
 

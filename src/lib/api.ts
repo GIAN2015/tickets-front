@@ -81,6 +81,7 @@ export async function updateTicket(id: number, data: any, token: string) {
     },
     body: JSON.stringify(data),
   });
+  
 
   if (!response.ok) {
     const text = await response.text();

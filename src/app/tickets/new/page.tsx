@@ -154,11 +154,51 @@ export default function NewTicketPage() {
       }
 
       // ✅ Llamada con FormData correctamente
-      const nuevoTicket = await createTicket(formData, token);
 
 
 
 
+
+      // ✅ En tu handleSubmit, justo después de:
+      const ticket = await createTicket(formData, token);
+
+      // -------------------------------------------------
+      // Correos de solicitante y creador
+      const destinatarioSolicitante = usuarios.find(u => u.id === Number(usuarioSolicitanteId))?.email;
+      const destinatarioCreador = ticket.creator?.email  ??""; // 👈 usa el user del state
+
+      // Unimos los correos válidos
+      const destinatarios = [destinatarioSolicitante, destinatarioCreador]
+        .filter(Boolean)
+        .join(",");
+        const username = usuarios.find(u => u.id === Number(usuarioSolicitanteId))?.username || decoded.username;
+      console.log("📧 Enviando correo a:", ticket.usuarioSolicitante?.email);
+      console.log("📧 Enviando correo a:", ticket.creator?.email);
+      if (destinatarios) {
+        await emailjs.send(
+          "service_abc123",          // tu service_id
+          "template_j8exnay",        // plantilla especial para creación
+          {
+            username,
+            to_email: destinatarios ?? "", // 👈 si existe solicitante
+                // 👈 si existe creador
+            ticket_id: ticket.id,                    // 👈 ahora usa el ticket real
+            title,                                   // debe coincidir con {{title}} en la plantilla
+            categoria,
+            prioridad,
+            tipo,
+            mensaje: description,                    // debe coincidir con {{mensaje}} en la plantilla
+            usuarioSolicitante: decoded.username,    // debe coincidir con {{usuarioSolicitante}}
+            fecha: new Date().toLocaleString(),
+          },
+          "Ofs_itQDgy3lq5I9T"        // tu public key
+        );
+      } else {
+        console.warn("⚠️ No se encontraron destinatarios válidos, no se envía correo.");
+      }
+
+
+      router.push('/dashboard');
 
 
       // const templateParams = {
@@ -293,19 +333,19 @@ export default function NewTicketPage() {
           />
         </div>
         <div>
-  <label className="block font-medium text-black mb-1">🗂 Tipo de Ticket</label>
-  <select
-    value={tipo}
-    onChange={(e) => setTipo(e.target.value as 'requerimiento' | 'incidencia' | 'consulta')}
-    className="w-full border border-gray-300 px-4 py-2 rounded-md focus:ring-2 focus:ring-green-500 outline-none text-black"
-  >
-    {tipos.map((t) => (
-      <option key={t.value} value={t.value}>
-        {t.label}
-      </option>
-    ))}
-  </select>
-</div>
+          <label className="block font-medium text-black mb-1">🗂 Tipo de Ticket</label>
+          <select
+            value={tipo}
+            onChange={(e) => setTipo(e.target.value as 'requerimiento' | 'incidencia' | 'consulta')}
+            className="w-full border border-gray-300 px-4 py-2 rounded-md focus:ring-2 focus:ring-green-500 outline-none text-black"
+          >
+            {tipos.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
 
         <button
