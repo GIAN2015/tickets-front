@@ -181,3 +181,27 @@ export async function getTicketById(ticketId: number | string) {
 }
 
 
+// Crear empresa + admin inicial
+export async function registerEmpresaAdmin(data: {
+  razonSocial: string;
+  telefono: string;
+  correoContacto: string;
+  ruc: string;
+  adminNombre: string;
+  adminEmail: string;
+  adminPassword: string;
+}) {
+  const res = await instance.post("api/auth/register", data);
+  return res.data;
+}
+
+// Crear usuario
+export async function createUsuario(data: {
+  username: string;
+  email: string;
+  password: string;
+  role: string;
+}) {
+  const res = await instance.post("/users", data);
+  return res.data;
+}

@@ -165,11 +165,17 @@ export default function TicketsCompletadosPage() {
         {filteredTickets.map((ticket) => (
           <li key={ticket.id} className="border border-gray-200 p-5 rounded-lg shadow-sm">
             <h2 className="text-xl font-semibold text-black">{ticket.title}</h2>
+               <p className="text-black">
+                Codígo de ticket: <span className="font-medium">{ticket.id}</span>
+              </p>
             <p className="text-sm text-black mt-1">{ticket.description}</p>
 
             <div className="mt-2 text-sm space-y-1">
               <p className="text-green-600">
                 Estado: <span className="font-medium">{ticket.status}</span>
+              </p>
+               <p className="text-green-600">
+                Codígo de ticket: <span className="font-medium">{ticket.id}</span>
               </p>
               <p className="text-black">
                 Prioridad: <span className="font-medium">{ticket.prioridad}</span>
