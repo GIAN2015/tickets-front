@@ -130,9 +130,12 @@ export default function NewTicketPage() {
       formData.append('tipo', tipo); // valor fijo
       formData.append('creatorId', String(creadoPorId)); // no usado directamente en el backend, pero por si acaso
 
-      if (archivo) { // archivo es tu useState para file
-        formData.append('archivo', archivo);
+      if (archivos.length > 0) {
+        archivos.forEach((file) => {
+          formData.append('archivos', file); // 👈 usa el mismo nombre que en el backend
+        });
       }
+
 
       if (decoded.role.toLowerCase() === 'ti') {
         if (!usuarioSolicitanteId) {

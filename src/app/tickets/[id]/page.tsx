@@ -150,16 +150,22 @@ export default function TicketDetailPage() {
         />
 
         {/* Archivo adjunto */}
-        {ticket.archivoNombre && (
-          <a
-            href={`http://localhost:3001/tickets/${ticket.archivoNombre}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-400 underline mt-4 inline-block hover:text-blue-300 transition"
-          >
-            📎 Ver archivo adjunto
-          </a>
+        {ticket.archivoNombre?.length > 0 && (
+          <div className="mt-4">
+            {ticket.archivoNombre.map((archivo: string, idx: number) => (
+              <a
+                key={idx}
+                href={`http://localhost:3001/tickets/${archivo}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-blue-400 underline hover:text-blue-300 transition"
+              >
+                📎 {archivo}
+              </a>
+            ))}
+          </div>
         )}
+
 
         {/* Botones de usuario */}
         {userRole === 'user' && ticket.status === 'resuelto' && !ticket.confirmadoPorUsuario && (

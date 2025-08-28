@@ -19,10 +19,18 @@ export default function CrearUsuario() {
     try {
       const data = await createUsuario(form);
       console.log("Usuario creado:", data);
-    } catch (err) {
-      console.error("Error al crear usuario:", err);
+      alert("Usuario creado:  " + form.email)
+    } catch (err: any) {
+      if (err.response) {
+        console.error("Error del backend:", err.response.data); // 👈 aquí
+        alert("Error: " + JSON.stringify(err.response.data.message));
+      } else {
+        console.error("Error desconocido:", err);
+        alert("Error al crear usuario");
+      }
     }
   };
+
 
   return (
     <form

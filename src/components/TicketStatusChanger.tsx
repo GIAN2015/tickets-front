@@ -40,7 +40,8 @@ export default function TicketStatusChanger({
   const [role, setRole] = useState<string | null>(null);
   const [showRechazoMessage, setShowRechazoMessage] = useState(rechazadoPorUsuario);
   const [rechazadoLocal, setRechazadoLocal] = useState(rechazadoPorUsuario);
-  const [archivo, setArchivo] = useState<File | null>(null);
+  const [archivos, setArchivos] = useState<File[]>([]);
+
   const [dbStatus, setDbStatus] = useState(currentStatus);
 
 
@@ -89,13 +90,15 @@ export default function TicketStatusChanger({
         Authorization: `Bearer ${token}`,
       };
 
-      if (archivo) {
+      if (archivos) {
         // Si hay archivo → multipart/form-data
         const formData = new FormData();
         formData.append('status', status);
         formData.append('prioridad', prioridad);
         formData.append('message', message || '');
-        formData.append('archivo', archivo);
+        archivos.forEach((file) => {
+          formData.append('archivos', file); // 👈 debe llamarse igual que en FilesInterceptor('archivos')
+        });
         bodyToSend = formData;
         // No se define Content-Type para FormData
       } else {
@@ -222,10 +225,20 @@ export default function TicketStatusChanger({
       {dbStatus !== 'completado' && (
         <>
           <label className="block mt-4 mb-2">
-            <span className="text-sm">Archivo adjunto:</span>
+            <span className="text-sm">Archivos adjuntos (máx 3):</span>
             <input
               type="file"
-              onChange={(e) => setArchivo(e.target.files ? e.target.files[0] : null)}
+              multiple
+              accept=".jpg,.png,.pdf,.docx,.xlsx" // opcional limitar tipos
+              onChange={(e) => {
+                const files = e.target.files ? Array.from(e.target.files) : [];
+                if (files.length > 3) {
+                  alert("Solo puedes subir un máximo de 3 archivos");
+                  return;
+                }
+                setArchivos(files);
+              }}
+
               className="mt-1"
             />
           </label>

@@ -26,11 +26,11 @@ export default instance;
 
 // Funciones API
 
-export async function login(username: string, password: string) {
-  console.log('Enviando login:', { username, password });
+export async function login(email: string, password: string) {
+  console.log('Enviando login:', { email, password });
 
   const res = await instance.post('/auth/login', {
-    username,
+    email,
     password,
   });
 
@@ -40,7 +40,7 @@ export async function login(username: string, password: string) {
 export async function getTickets(token: string) {
   const res = await fetch(`${API_BASE}/tickets`, {
     headers: {
-      Authorization: `Bearer ${token}`,  // <--- IMPORTANTE
+      Authorization: `Bearer ${token}`,
     },
   });
 
@@ -202,6 +202,14 @@ export async function createUsuario(data: {
   password: string;
   role: string;
 }) {
-  const res = await instance.post("/users", data);
+  const token = localStorage.getItem("token"); // o de donde lo guardes
+
+  const res = await instance.post("/users", data, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
   return res.data;
 }
+

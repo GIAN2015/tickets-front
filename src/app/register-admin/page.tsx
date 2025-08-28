@@ -25,30 +25,35 @@ export default function RegisterAdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
+
       const data = await res.json();
 
-      
-      console.log("Respuesta backend:", data);
-      alert("Empresa + Admin creados correctamente ✅");
+      if (!res.ok) {
+        console.error("❌ Error en registro:", data);
+        alert("Error: " + JSON.stringify(data.message));
+        return;
+      }
 
-      router.push("/registro");
+      console.log("✅ Respuesta backend:", data);
+      alert("Empresa + Admin creados correctamente ✅");
     } catch (error) {
-      console.error("Error en registro:", error);
+      console.error("Error en request:", error);
       alert("Error al registrar");
     }
   };
+
 
   return (
     <div className="max-w-lg mx-auto p-6 bg-white shadow rounded">
       <h2 className="text-2xl font-bold mb-4 text-center">Registro Inicial Empresa</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input name="razonSocial" placeholder="Razón Social" onChange={handleChange} className="w-full border p-2 rounded"/>
-        <input name="telefono" placeholder="Teléfono" onChange={handleChange} className="w-full border p-2 rounded"/>
-        <input name="correoContacto" placeholder="Correo de contacto" onChange={handleChange} className="w-full border p-2 rounded"/>
-        <input name="ruc" placeholder="RUC" onChange={handleChange} className="w-full border p-2 rounded"/>
-        <input name="adminNombre" placeholder="Nombre del Admin" onChange={handleChange} className="w-full border p-2 rounded"/>
-        <input name="adminEmail" placeholder="Correo del Admin" type="email" onChange={handleChange} className="w-full border p-2 rounded"/>
-        <input name="adminPassword" placeholder="Contraseña" type="password" onChange={handleChange} className="w-full border p-2 rounded"/>
+        <input name="razonSocial" placeholder="Razón Social" onChange={handleChange} className="w-full border p-2 rounded" />
+        <input name="telefono" placeholder="Teléfono" onChange={handleChange} className="w-full border p-2 rounded" />
+        <input name="correoContacto" placeholder="Correo de contacto" onChange={handleChange} className="w-full border p-2 rounded" />
+        <input name="ruc" placeholder="RUC" onChange={handleChange} className="w-full border p-2 rounded" />
+        <input name="adminNombre" placeholder="Nombre del Admin" onChange={handleChange} className="w-full border p-2 rounded" />
+        <input name="adminEmail" placeholder="Correo del Admin" type="email" onChange={handleChange} className="w-full border p-2 rounded" />
+        <input name="adminPassword" placeholder="Contraseña" type="password" onChange={handleChange} className="w-full border p-2 rounded" />
         <button type="submit" className="w-full bg-green-600 text-white py-2 rounded" >
           Registrar Empresa + Admin
         </button>
