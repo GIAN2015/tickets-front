@@ -6,9 +6,7 @@ const API_BASE = 'http://localhost:3001/api'; // ← Agrega /api al final
 
 const instance = axios.create({
   baseURL: API_BASE,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+ 
 });
 
 // Interceptor para añadir el token automáticamente

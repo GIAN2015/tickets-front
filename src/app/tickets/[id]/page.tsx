@@ -241,15 +241,23 @@ export default function TicketDetailPage() {
                   {h.mensaje && (
                     <p className="italic text-gray-400 mt-2">💬 "{h.mensaje}"</p>
                   )}
-                  {h.adjuntoNombre && (
-                    <a
-                      href={`http://localhost:3001/tickets/${h.adjuntoNombre}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 underline hover:text-blue-300 mt-2 inline-block transition"
-                    >
-                      📎 Ver archivo adjunto
-                    </a>
+                  {h.adjuntoNombre && h.adjuntoNombre.length > 0 && (
+                    <div>
+                      <b>Archivos adjuntos:</b>
+                      <ul>
+                        {h.adjuntoNombre.map((file: string, idx: number) => (
+                          <li key={idx}>
+                            <a
+                              href={`http://localhost:3001/tickets/${file}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {file}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </div>
               </div>

@@ -104,7 +104,7 @@ export default function NewTicketPage() {
         const data = await res.json();
         setUsuarios(data);
       } catch (err) {
-        console.error('Error al obtener usuarios', err);
+        console.error('Error al obtener usuarios', err); 
       }
     })();
   }, [user]);
