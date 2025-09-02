@@ -6,7 +6,7 @@ const API_BASE = 'http://localhost:3001/api'; // ← Agrega /api al final
 
 const instance = axios.create({
   baseURL: API_BASE,
- 
+
 });
 
 // Interceptor para añadir el token automáticamente
@@ -134,23 +134,26 @@ export async function getTicketHistory(id: number) {
 
 
 export const rechazarResolucionTicket = async (ticketId: number) => {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem("token");
 
-  const res = await instance.patch(
-    `/tickets/${ticketId}/rechazar`,
-    {}, // cuerpo vacío
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-  if (res.status >= 400) {
-    throw new Error('Error al rechazar resolución');
+  try {
+    const res = await instance.patch(
+      `/tickets/${ticketId}/rechazar`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return res.data;
+  } catch (err: any) {
+    // Axios trae info detallada en err.response
+    console.error("Error al rechazar resolución:", err?.response?.data || err);
+    throw new Error(err?.response?.data?.message || "Error al rechazar resolución");
   }
-
-  return res.data;
 };
+
 
 
 export const resetearRechazoResolucion = async (ticketId: number) => {

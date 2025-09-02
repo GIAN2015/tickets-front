@@ -90,14 +90,14 @@ export default function TicketStatusChanger({
         Authorization: `Bearer ${token}`,
       };
 
-      if (archivos) {
+      if (archivos?.length && archivos.length > 0) {
         // Si hay archivo → multipart/form-data
         const formData = new FormData();
         formData.append('status', status);
         formData.append('prioridad', prioridad);
         formData.append('message', message || '');
         archivos.forEach((file) => {
-          formData.append('archivos', file); // 👈 debe llamarse igual que en FilesInterceptor('archivos')
+        formData.append('archivos', file); // 👈 debe llamarse igual que en FilesInterceptor('archivos')
         });
         bodyToSend = formData;
         // No se define Content-Type para FormData
