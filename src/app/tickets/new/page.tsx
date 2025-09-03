@@ -90,24 +90,36 @@ export default function NewTicketPage() {
   }, []);
 
   // Si es TI, carga la lista de usuarios desde el backend
-  useEffect(() => {
-    if (user?.role !== 'ti') return;
 
-    const token = localStorage.getItem('token');
+  // Si es TI, carga la lista de usuarios desde el backend
+  // Si es TI, carga la lista de usuarios de su empresa desde el backend
+  useEffect(() => {
+    if (user?.role !== "ti") return;
+
+    const token = localStorage.getItem("token");
     if (!token) return;
 
     (async () => {
       try {
-        const res = await fetch('http://localhost:3001/api/users', {
+        const res = await fetch("http://localhost:3001/api/users/by-empresa", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        setUsuarios(data);
+
+        if (Array.isArray(data)) {
+          setUsuarios(data);
+        } else if (data?.users) {
+          setUsuarios(data.users); // por si backend devuelve { users: [...] }
+        } else {
+          setUsuarios([]);
+        }
       } catch (err) {
-        console.error('Error al obtener usuarios', err); 
+        console.error("Error al obtener usuarios", err);
+        setUsuarios([]);
       }
     })();
   }, [user]);
+
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -155,62 +167,12 @@ export default function NewTicketPage() {
       const ticket = await createTicket(formData, token);
 
 
-      // Correos de solicitante y creador
-      const destinatarioSolicitante = usuarios.find(u => u.id === Number(usuarioSolicitanteId))?.email;
-      const destinatarioCreador = ticket.creator?.email ?? "";
 
-      // Unimos los correos válidos
-      const destinatarios = [destinatarioSolicitante, destinatarioCreador]
-        .filter(Boolean)
-        .join(",");
-      const username = usuarios.find(u => u.id === Number(usuarioSolicitanteId))?.username || decoded.username;
-      console.log("📧 Enviando correo a:", ticket.usuarioSolicitante?.email);
-      console.log("📧 Enviando correo a:", ticket.creator?.email);
-      if (destinatarios) {
-        await emailjs.send(
-          "service_abc123",          // tu service_id
-          "template_j8exnay",        // plantilla especial para creación
-          {
-            username,
-            to_email: destinatarios ?? "", // 👈 si existe solicitante
-            // 👈 si existe creador
-            ticket_id: ticket.id,                    // 👈 ahora usa el ticket real
-            title,                                   // debe coincidir con {{title}} en la plantilla
-            categoria,
-            prioridad,
-            tipo,
-            mensaje: description,                    // debe coincidir con {{mensaje}} en la plantilla
-            usuarioSolicitante: decoded.username,    // debe coincidir con {{usuarioSolicitante}}
-            fecha: new Date().toLocaleString(),
-          },
-          "Ofs_itQDgy3lq5I9T"        // tu public key
-        );
-      } else {
-        console.warn("⚠️ No se encontraron destinatarios válidos, no se envía correo.");
-      }
 
 
       router.push('/dashboard');
 
 
-      // const templateParams = {
-      //   id: nuevoTicket.id,
-      //   name: decoded.username,
-      //   email: usuarioSolicitanteEmail || (usuarios.find(u => u.id === Number(usuarioSolicitanteId))?.email ?? ''), // 👈 Aquí se usa el solicitante si existe
-      //   // email2: decoded.email,
-      //   title,
-      //   category: categoria,
-      //   priority: prioridad,
-      //   message: description,
-      //   time: fechaActual,
-      // };
-
-      // await emailjs.send(
-      //   'service_abc123',
-      //   'template_j8exnay',
-      //   templateParams,
-      //   'FBQ9PmnOeJKELISx3'
-      // );
 
       alert('Ticket creado y notificación enviada con éxito');
       router.push('/dashboard');

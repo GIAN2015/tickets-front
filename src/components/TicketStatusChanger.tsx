@@ -74,9 +74,6 @@ export default function TicketStatusChanger({
       setRole(storedRole);
     }
   }, []);
-  useEffect(() => {
-    emailjs.init("Ofs_itQDgy3lq5I9T"); // 👈 pega tu public key aquí
-  }, []);
 
   const handleUpdate = async () => {
     try {
@@ -97,7 +94,7 @@ export default function TicketStatusChanger({
         formData.append('prioridad', prioridad);
         formData.append('message', message || '');
         archivos.forEach((file) => {
-        formData.append('archivos', file); // 👈 debe llamarse igual que en FilesInterceptor('archivos')
+          formData.append('archivos', file); // 👈 debe llamarse igual que en FilesInterceptor('archivos')
         });
         bodyToSend = formData;
         // No se define Content-Type para FormData
@@ -116,13 +113,28 @@ export default function TicketStatusChanger({
         headers: headersToSend,
         body: bodyToSend,
       });
-      if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(`Error al actualizar: ${msg}`);
+
+      // intenta parsear como JSON siempre
+      let data: any;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
       }
+
+      if (!res.ok) {
+        throw new Error(
+          `Error al actualizar (${res.status}): ${data?.message || 'Sin detalle'}`
+        );
+      }
+
+      // aquí sí tienes tu objeto actualizado
+      // aquí sí tienes tu objeto actualizado
       setRechazadoLocal(false);
-      const updated = await res.json();
-      // Enviar correo al usuario solicitante
+      const updated = data;
+
+      // 👇 limpiar los archivos para que no se acumulen en el próximo update
+      setArchivos([]);
 
 
       // Enviar correo al creador del ticket
@@ -134,32 +146,7 @@ export default function TicketStatusChanger({
       setShowRechazoMessage(false);
 
 
-      const destinatarioSolicitante = updated.usuarioSolicitante?.email;
-      const destinatarioCreador = updated.creator?.email;
-      const destinatarioActualizador = updated.actualizadoPor?.email;
-
-      // unir los correos válidos
-      const destinatarios = [destinatarioSolicitante, destinatarioCreador, destinatarioActualizador]
-        .filter(Boolean) // quita los undefined/null
-        .join(","); // EmailJS acepta lista separada por coma
-
-      console.log("📧 Enviando correo a:", destinatarios);
-      console.log("📧 Actualizado por:", destinatarioActualizador);
-
-      if (!destinatarios) {
-        console.warn(`⚠️ Ticket ${updated.id} no tiene emails válidos, no se envía`);
-        return;
-      }
-
-      await emailjs.send("service_abc123", "template_qxfh3l4", {
-        title: updated.title,
-        to_email: destinatarios,
-        ticket_id: updated.id,
-        nuevo_estado: updated.status,
-        prioridad: updated.prioridad,
-        mensaje: updated.message ?? "",
-        fecha: new Date().toLocaleString(),
-      });
+  
       // actualizas estados locales
       onStatusChanged?.(updated.status);
       onPrioridadChanged?.(updated.prioridad);
@@ -169,10 +156,16 @@ export default function TicketStatusChanger({
 
       window.location.reload();
       alert('Ticket actualizado con éxito y correo enviado');
-    } catch (err) {
-      console.error(err);
-      alert('Error al actualizar el ticket');
-    }
+    }  catch (err: any) {
+  console.error("❌ Error en handleSubmit:", err);
+  if (err instanceof Error) {
+    console.error("📄 Mensaje:", err.message);
+  } else {
+    console.error("📄 Detalle (stringificado):", JSON.stringify(err));
+  }
+  alert('Error al crear ticket o enviar correo');
+}
+
   };
 
 

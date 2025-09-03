@@ -70,24 +70,7 @@ export async function createTicket(formData: FormData, token: string) {
 
 
 // lib/api.ts
-export async function updateTicket(id: number, data: any, token: string) {
-  const response = await fetch(`http://localhost:3001/api/tickets/${id}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    console.error('Error en backend:', text);
-    throw new Error(`Error al actualizar ticket (${response.status})`);
-  }
-
-  return response.json();
-}
+// lib/api.ts
 
 
 

@@ -68,12 +68,7 @@ export default function Dashboard() {
         )
       );
 
-      await emailjs.send(
-        "service_xxx",
-        "template_confirmacion",
-        { ticketId, mensaje: `El ticket #${ticketId} fue confirmado ✅` },
-        "publicKey_xxx"
-      );
+
     } catch (err) {
       console.error(err);
       alert("No se pudo confirmar la resolución");
@@ -89,12 +84,8 @@ export default function Dashboard() {
         )
       );
 
-      await emailjs.send(
-        "service_xxx",
-        "template_rechazo",
-        { ticketId, mensaje: `El ticket #${ticketId} fue RECHAZADO ❌` },
-        "publicKey_xxx"
-      );
+
+
     } catch (err) {
       console.error(err);
       alert("No se pudo rechazar la resolución");
@@ -105,15 +96,23 @@ export default function Dashboard() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
-    fetch("http://localhost:3001/api/users", {
+    fetch("http://localhost:3001/api/users/by-empresa", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
-      .then((data) => setUsuarios(data))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setUsuarios(data);
+        } else if (data?.users) {
+          setUsuarios(data.users); // 👈 si backend devuelve empresa con users
+        } else {
+          setUsuarios([]); // fallback vacío
+        }
+      })
       .catch((err) => console.error("Error al cargar usuarios:", err));
   }, []);
 
-  
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -253,15 +252,15 @@ export default function Dashboard() {
       {/* Lista de tickets como tarjetas */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {ticketsPaginados.map((ticket: any) => (
-          
+
           <Card
             key={ticket.id}
             className="shadow-md border border-gray-200 hover:shadow-lg transition"
           >
             <CardHeader>
               <CardTitle className="text-lg font-semibold text-blue-700">
-                 <Link href={`/tickets/${ticket.id}`} className="hover:underline">
-                #{ticket.id} - {ticket.title}</Link>
+                <Link href={`/tickets/${ticket.id}`} className="hover:underline">
+                  #{ticket.id} - {ticket.title}</Link>
               </CardTitle>
               <CardDescription>{ticket.description}</CardDescription>
             </CardHeader>
