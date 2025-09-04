@@ -1,7 +1,7 @@
 "use client";
 import router from "next/router";
 import { useState } from "react";
-
+import { useRouter } from "next/navigation";
 export default function RegisterAdminPage() {
   const [form, setForm] = useState({
     razonSocial: "",
@@ -19,6 +19,7 @@ export default function RegisterAdminPage() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const router = useRouter(); //
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -38,6 +39,7 @@ export default function RegisterAdminPage() {
 
       console.log("✅ Respuesta backend:", data);
       alert("Empresa + Admin creados correctamente ✅");
+      router.push("/login");
     } catch (error) {
       console.error("Error en request:", error);
       alert("Error al registrar");

@@ -29,13 +29,19 @@ export default function LoginPage() {
       localStorage.setItem('token', access_token);
       localStorage.setItem('role', role);
 
-      router.push('/dashboard');
+      // ✅ Redirección según rol
+      if (role === 'admin') {
+        router.push('/registro'); // 👈 solo admin
+      } else {
+        router.push('/dashboard'); // 👈 los demás
+      }
     } catch (err) {
       setError('❌ Credenciales inválidas. Intenta nuevamente.');
     } finally {
       setLoading(false);
     }
   }
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300 px-4">
@@ -44,7 +50,7 @@ export default function LoginPage() {
         className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md space-y-6 border border-gray-200"
       >
         <h1 className="text-3xl font-bold text-center text-gray-800">🔐 Iniciar Sesión</h1>
-        
+
         {error && (
           <div className="text-red-600 bg-red-100 p-3 rounded-md text-sm">
             {error}
