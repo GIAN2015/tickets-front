@@ -3,6 +3,10 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
 import LogoutButton from "@/components/LogoutButton"; // 👈 importa aquí
+import AuthGuard from "@/components/AuthGuard";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import ConditionalMain from "@/components/ConditionalMain";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,36 +33,16 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-100 text-gray-900`}
       >
-        {/* Header */}
-        <header className="bg-blue-600 text-white py-4 shadow-md">
-          <div className="container mx-auto flex justify-between items-center px-6">
-            <h1 className="text-xl font-bold">Sistema de Tickets</h1>
-            <nav className="flex items-center gap-4">
-              <Link href="/dashboard" className="hover:underline">
-                Dashboard
-              </Link>
-              <Link href="/tickets/new" className="hover:underline">
-                Nuevo Ticket
-              </Link>
-              <Link href="/tickets" className="hover:underline">
-                Mis Tickets
-              </Link>
-              <LogoutButton /> {/* 👈 botón cliente */}
-            </nav>
-          </div>
-        </header>
-
+        <AuthGuard>
+        <Header />
+        
         {/* Contenido principal */}
-        <main className="container mx-auto px-6 py-8 min-h-[80vh]">
+        <ConditionalMain>
           {children}
-        </main>
+        </ConditionalMain>
 
-        {/* Footer */}
-        <footer className="bg-gray-800 text-gray-200 text-center py-4 mt-10">
-          <p className="text-sm">
-            © {new Date().getFullYear()} Sistema de Tickets — Desarrollado Por Danyris
-          </p>
-        </footer>
+        <Footer/>
+        </AuthGuard>
       </body>
     </html>
   );

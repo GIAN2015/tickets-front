@@ -123,14 +123,10 @@ export default function NewTicketPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('No has iniciado sesión');
-      return;
-    }
+    const token: any = localStorage.getItem('token');
 
     try {
-      const decoded: any = jwtDecode(token);
+      const decoded: any = token ? jwtDecode(token) : null;
       const creadoPorId = Number(decoded.sub);
 
       // Usa FormData en lugar de ticketData plano
