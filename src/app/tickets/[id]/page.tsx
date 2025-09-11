@@ -72,7 +72,18 @@ export default function TicketDetailPage() {
       });
   }, []);
 
+  async function refreshTicket() {
+    const token = localStorage.getItem("token");
+    const res = await fetch(`http://localhost:3001/api/tickets/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    setTicket(data);
+  }
 
+  useEffect(() => {
+    refreshTicket();
+  }, [id]);
 
   const confirmarResolucion = async (ticketId: number) => {
     try {
@@ -147,6 +158,7 @@ export default function TicketDetailPage() {
           onStatusChanged={(newStatus) => setTicket((prev) => ({ ...prev, status: newStatus }))}
           onPrioridadChanged={(newPrioridad) => setTicket((prev) => ({ ...prev, prioridad: newPrioridad }))}
           message={mensaje}
+          refreshHistorial={refreshTicket} 
         />
 
         {/* Archivo adjunto */}
