@@ -1,12 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
 
 export default function LogoutButton() {
   const router = useRouter();
 
   const handleLogout = () => {
-    // Aquí borras el token de autenticación (localStorage, cookies, etc.)
     localStorage.removeItem("token");
     router.push("/login");
   };
@@ -14,9 +14,10 @@ export default function LogoutButton() {
   return (
     <button
       onClick={handleLogout}
-      className=" px-3 py-1 rounded text-white hover:underline  transition-colors"
+      className="flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-100 transition-colors w-full"
     >
-      Cerrar sesión
+      <LogOut className="w-4 h-4 text-slate-600" />
+      <span>Cerrar sesión</span>
     </button>
   );
 }

@@ -74,6 +74,7 @@ export default function Dashboard() {
       alert("No se pudo confirmar la resolución");
     }
   };
+  
 
   const rechazarResolucion = async (ticketId: number) => {
     try {
@@ -153,6 +154,10 @@ export default function Dashboard() {
     indiceInicio + ticketsPorPagina
   );
   const totalPaginas = Math.ceil(ticketsFiltrados.length / ticketsPorPagina);
+
+  function fetchTicket(arg0: string) {
+    throw new Error("Function not implemented.");
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto text-gray-900">
@@ -309,6 +314,8 @@ export default function Dashboard() {
                   );
                 }}
               />
+             
+
 
               {userRole === "user" &&
                 ticket.status === "resuelto" &&

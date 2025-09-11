@@ -11,6 +11,7 @@ export default function RegisterAdminPage() {
     adminNombre: "",
     adminEmail: "",
     adminPassword: "",
+    smtpPassword: "",
   });
 
 
@@ -58,6 +59,13 @@ export default function RegisterAdminPage() {
         <input name="adminNombre" placeholder="Nombre del Admin" onChange={handleChange} className="w-full border p-2 rounded" />
         <input name="adminEmail" placeholder="Correo del Admin" type="email" onChange={handleChange} className="w-full border p-2 rounded" />
         <input name="adminPassword" placeholder="Contraseña" type="password" onChange={handleChange} className="w-full border p-2 rounded" />
+        <input
+          name="smtpPassword"
+          placeholder="Contraseña de aplicación Gmail"
+          type="password"
+          onChange={handleChange}
+          className="w-full border p-2 rounded"
+        />
         <button type="submit" className="w-full bg-green-600 text-white py-2 rounded" >
           Registrar Empresa + Admin
         </button>

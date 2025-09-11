@@ -80,7 +80,7 @@ export default function LoginPage() {
             </li>
             <li className="flex items-start gap-2">
               <span className="mt-0.5 inline-block w-2 h-2 bg-emerald-500 rounded-full"></span>
-              Notificaciones y historial automático
+              Notificaciones e historial automático
             </li>
           </ul>
         </aside>

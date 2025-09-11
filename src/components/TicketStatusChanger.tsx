@@ -146,7 +146,7 @@ export default function TicketStatusChanger({
       setShowRechazoMessage(false);
 
 
-  
+
       // actualizas estados locales
       onStatusChanged?.(updated.status);
       onPrioridadChanged?.(updated.prioridad);
@@ -156,15 +156,15 @@ export default function TicketStatusChanger({
 
       window.location.reload();
       alert('Ticket actualizado con éxito y correo enviado');
-    }  catch (err: any) {
-  console.error("❌ Error en handleSubmit:", err);
-  if (err instanceof Error) {
-    console.error("📄 Mensaje:", err.message);
-  } else {
-    console.error("📄 Detalle (stringificado):", JSON.stringify(err));
-  }
-  alert('Error al crear ticket o enviar correo');
-}
+    } catch (err: any) {
+      console.error("❌ Error en handleSubmit:", err);
+      if (err instanceof Error) {
+        console.error("📄 Mensaje:", err.message);
+      } else {
+        console.error("📄 Detalle (stringificado):", JSON.stringify(err));
+      }
+      alert('Error al crear ticket o enviar correo');
+    }
 
   };
 
@@ -172,10 +172,10 @@ export default function TicketStatusChanger({
 
   return (
     <>
-      {/* Solo TI puede ver Estado y Prioridad */}
+
       {role === 'ti' && (
         <>
-          {status === 'resuelto' && rechazadoPorUsuario && (
+          {rechazadoPorUsuario && (
             <p className="text-red-600 font-semibold">
               ⚠️ El usuario rechazó la resolución del ticket.
             </p>
@@ -213,8 +213,48 @@ export default function TicketStatusChanger({
         </>
       )}
 
-      {/* Archivo adjunto y Guardar Cambios para TODOS */}
-      {/* Archivo adjunto y Guardar Cambios solo si NO está completado */}
+      {/* 🔹 Solo los de TI ven el botón Aceptar si el ticket NO tiene solicitante */}
+      {/* 🔹 Solo los de TI ven el botón Aceptar si el ticket NO tiene solicitante */}
+      {role === "ti" && !ticket?.usuarioSolicitante && (
+        <div className="mt-4 p-4 border rounded bg-yellow-50">
+          <p className="mb-2 font-semibold text-yellow-700">
+            ⚠️ Este ticket aún no tiene un usuario solicitante asignado.
+          </p>
+          <button
+            onClick={async () => {
+              try {
+                const token = localStorage.getItem("token");
+                const res = await fetch(
+                  `http://localhost:3001/api/tickets/${ticketId}/aceptar`,
+                  {
+                    method: "PATCH",
+                    headers: { Authorization: `Bearer ${token}` },
+                  }
+                );
+
+                if (!res.ok) {
+                  const err = await res.json();
+                  throw new Error(err.message || "No se pudo aceptar el ticket");
+                }
+
+                const updatedTicket = await res.json();
+                alert("✅ Ahora eres el usuario solicitante del ticket");
+
+                // 🔹 Forzamos a refrescar datos del ticket desde el backend
+                await refreshHistorial();
+              } catch (error: any) {
+                alert("❌ Error al aceptar ticket: " + error.message);
+              }
+            }}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            ✅ Aceptar Ticket
+          </button>
+        </div>
+      )}
+
+
+
       {dbStatus !== 'completado' && (
         <>
           <label className="block mt-4 mb-2">

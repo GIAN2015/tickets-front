@@ -9,7 +9,7 @@ export default function Footer() {
         return null;
     }
   return (
-    <footer className="bg-gray-800 text-gray-200 text-center py-4 mt-10">
+    <footer className="bg-gray-800 text-gray-200 text-center py-4">
       <p className="text-sm">
         © {new Date().getFullYear()} Sistema de Tickets — Desarrollado Por Danyris
       </p>
