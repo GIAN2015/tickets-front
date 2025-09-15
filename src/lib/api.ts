@@ -1,8 +1,8 @@
 // src/lib/api.ts
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:3001/api'; // ← Agrega /api al final
-
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 const instance = axios.create({
   baseURL: API_BASE,
