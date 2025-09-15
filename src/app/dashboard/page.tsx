@@ -21,14 +21,25 @@ import {
 import { Button } from "@/components/ui/button";
 
 interface Usuario {
+  username: string;
   id: number;
   nombre: string;
   email: string;
   role: string;
 }
 
+type Ticket = {
+  id: number;
+  titulo: string;
+  descripcion: string;
+  estado: string;
+  prioridad: string;
+  confirmadoPorUsuario?: boolean; // opcional
+};
+
 export default function Dashboard() {
-  const [tickets, setTickets] = useState([]);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+
   const [userRole, setUserRole] = useState("");
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [usuarioSeleccionado, setUsuarioSeleccionado] = useState<number | null>(
@@ -74,7 +85,7 @@ export default function Dashboard() {
       alert("No se pudo confirmar la resolución");
     }
   };
-  
+
 
   const rechazarResolucion = async (ticketId: number) => {
     try {
@@ -313,8 +324,10 @@ export default function Dashboard() {
                     )
                   );
                 }}
+                message="Resolviendo ticket..." // 👈 aquí agregas message
+               
               />
-             
+
 
 
               {userRole === "user" &&
