@@ -47,7 +47,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
   const publicRoutes = ["/login"];
   const roleRoutes: Record<string, string[]> = {
-    admin: ["/usuarios", "/register-admin","/registro"],
+    admin: ["/usuarios", "/registro"],
     user: ["/dashboard", "/tickets"],
     ti: ["/dashboard", "/registro", "/tickets"],
   };
