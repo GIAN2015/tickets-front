@@ -52,7 +52,7 @@ export async function getTickets(token: string) {
 
 
 export async function createTicket(formData: FormData, token: string) {
-  const response = await fetch('http://localhost:3001/api/tickets', {
+  const response = await fetch(`${API_BASE}/tickets`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -75,7 +75,7 @@ export async function createTicket(formData: FormData, token: string) {
 
 
 export async function getUsuarios(token: string) {
-  const res = await fetch('http://localhost:3001/api/users', {
+  const res = await fetch(`${API_BASE}/users`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
