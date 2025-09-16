@@ -175,7 +175,7 @@ export async function registerEmpresaAdmin(data: {
   adminEmail: string;
   adminPassword: string;
 }) {
-  const res = await instance.post("api/auth/register", data);
+  const res = await instance.post("/auth/register", data);
   return res.data;
 }
 
