@@ -109,7 +109,7 @@ export default function TicketStatusChanger({
         });
       }
 
-      const res = await fetch(`http://localhost:3001/api/tickets/${ticketId}`, {
+      const res = await fetch(`https://tickets-backend-fw5d.onrender.com/api/tickets/${ticketId}`, {
         method: 'PATCH',
         headers: headersToSend,
         body: bodyToSend,
@@ -223,7 +223,7 @@ export default function TicketStatusChanger({
               try {
                 const token = localStorage.getItem("token");
                 const res = await fetch(
-                  `http://localhost:3001/api/tickets/${ticketId}/aceptar`,
+                  `https://tickets-backend-fw5d.onrender.com/api/tickets/${ticketId}/aceptar`,
                   {
                     method: "PATCH",
                     headers: { Authorization: `Bearer ${token}` },

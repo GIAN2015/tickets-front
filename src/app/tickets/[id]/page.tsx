@@ -102,7 +102,7 @@ export default function TicketDetailPage() {
 
   async function refreshTicket() {
     const token = localStorage.getItem("token");
-    const res = await fetch(`http://localhost:3001/api/tickets/${id}`, {
+    const res = await fetch(`https://tickets-backend-fw5d.onrender.com/api/tickets/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
@@ -201,7 +201,7 @@ export default function TicketDetailPage() {
             {ticket.archivoNombre.map((archivo: string, idx: number) => (
               <a
                 key={idx}
-                href={`http://localhost:3001/tickets/${archivo}`}
+                href={`https://tickets-backend-fw5d.onrender.com/tickets/${archivo}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block text-blue-400 underline hover:text-blue-300 transition"
@@ -294,7 +294,7 @@ export default function TicketDetailPage() {
                         {h.adjuntoNombre.map((file: string, idx: number) => (
                           <li key={idx}>
                             <a
-                              href={`http://localhost:3001/tickets/${file}`}
+                              href={`https://tickets-backend-fw5d.onrender.com/tickets/${file}`}
                               target="_blank"
                               rel="noopener noreferrer"
                             >
