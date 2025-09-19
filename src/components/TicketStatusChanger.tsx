@@ -26,14 +26,14 @@ export default function TicketStatusChanger({
 }: {
   ticket: any;
   ticketId: number;
-  message: string;
+  message?: string;
   currentStatus: string;
   currentPrioridad: string;
   onStatusChanged: (newStatus: string) => void;
   onPrioridadChanged: (newPrioridad: string) => void;
   confirmadoPorUsuario: boolean;
   rechazadoPorUsuario: boolean;
-  refreshHistorial: () => Promise<void>; // <--- tipo
+  refreshHistorial?: () => Promise<void>; // <--- tipo
 }) {
   const [status, setStatus] = useState(currentStatus);
   const [prioridad, setPrioridad] = useState(currentPrioridad);
@@ -41,6 +41,7 @@ export default function TicketStatusChanger({
   const [showRechazoMessage, setShowRechazoMessage] = useState(rechazadoPorUsuario);
   const [rechazadoLocal, setRechazadoLocal] = useState(rechazadoPorUsuario);
   const [archivos, setArchivos] = useState<File[]>([]);
+  const [aceptado, setAceptado] = useState(!!ticket?.usuarioSolicitante);
 
   const [dbStatus, setDbStatus] = useState(currentStatus);
 
@@ -212,10 +213,7 @@ export default function TicketStatusChanger({
           </div>
         </>
       )}
-
-      {/* 🔹 Solo los de TI ven el botón Aceptar si el ticket NO tiene solicitante */}
-      {/* 🔹 Solo los de TI ven el botón Aceptar si el ticket NO tiene solicitante */}
-      {role === "ti" && !ticket?.usuarioSolicitante && (
+      {role === "ti" && !aceptado && (
         <div className="mt-4 p-4 border rounded bg-yellow-50">
           <p className="mb-2 font-semibold text-yellow-700">
             ⚠️ Este ticket aún no tiene un usuario solicitante asignado.
@@ -240,8 +238,8 @@ export default function TicketStatusChanger({
                 const updatedTicket = await res.json();
                 alert("✅ Ahora eres el usuario solicitante del ticket");
 
-                // 🔹 Forzamos a refrescar datos del ticket desde el backend
-                await refreshHistorial();
+                setAceptado(true); // 🔹 Oculta el mensaje
+                await refreshHistorial?.();
               } catch (error: any) {
                 alert("❌ Error al aceptar ticket: " + error.message);
               }
@@ -252,6 +250,7 @@ export default function TicketStatusChanger({
           </button>
         </div>
       )}
+
 
 
 

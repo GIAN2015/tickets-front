@@ -8,28 +8,56 @@ import { getTicketHistory } from '@/lib/api';
 
 
 import { jwtDecode } from 'jwt-decode';
+// src/types/ticket.ts
+type Ticket = {
+  id: number;
+  title: string;
+  description: string;
+  status: string;
+  prioridad: string;
+  tipo: string;
+  categoria: string;
+  confirmadoPorUsuario?: boolean;
+  rechazadoPorUsuario?: boolean;
+  usuarioSolicitante?: {
+    id: number;
+    username: string;
+    email: string;
+  } | null;
+  creator?: {
+    id: number;
+    username?: string;
+    email: string;
+  } | null;
+  archivoNombre?: string[];
+};
 
 export default function TicketDetailPage() {
   const params = useParams();
   const { id } = params;
   const [ticket, setTicket] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [tickets, setTickets] = useState([]);
+
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userId, setUserId] = useState<number | null>(null);
   const [mensaje, setMensaje] = useState('');
   const [historial, setHistorial] = useState<any[]>([]);
-  useEffect(() => {
 
+
+  useEffect(() => {
     if (!id) return;
 
-    getTicketById(id)
+    // Aseguramos que id sea string
+    const ticketId = Array.isArray(id) ? id[0] : id;
+
+    getTicketById(ticketId)
       .then((data) => {
         setTicket(data);
         setLoading(false);
       })
       .catch((err) => {
-        console.error('Error al obtener ticket:', err);
+        console.error("Error al obtener ticket:", err);
         setLoading(false);
       });
   }, [id]);
@@ -150,15 +178,21 @@ export default function TicketDetailPage() {
         )}
 
         <TicketStatusChanger
+          ticket={ticket}
           ticketId={ticket.id}
           currentStatus={ticket.status}
           currentPrioridad={ticket.prioridad}
           confirmadoPorUsuario={ticket.confirmadoPorUsuario}
           rechazadoPorUsuario={ticket.rechazadoPorUsuario}
-          onStatusChanged={(newStatus) => setTicket((prev) => ({ ...prev, status: newStatus }))}
-          onPrioridadChanged={(newPrioridad) => setTicket((prev) => ({ ...prev, prioridad: newPrioridad }))}
+          onStatusChanged={(newStatus) =>
+            setTicket((prev: any) => ({ ...prev, status: newStatus }))
+          }
+          onPrioridadChanged={(newPrioridad) =>
+            setTicket((prev: any) => ({ ...prev, prioridad: newPrioridad }))
+          }
+
           message={mensaje}
-          refreshHistorial={refreshTicket} 
+          refreshHistorial={refreshTicket}
         />
 
         {/* Archivo adjunto */}

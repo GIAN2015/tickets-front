@@ -3,7 +3,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
 
 interface Ticket {
-  [x: string]: ReactNode;
+
   description: ReactNode;
   id: number;
   title: string;

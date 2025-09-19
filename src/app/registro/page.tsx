@@ -77,7 +77,7 @@ export default function CrearUsuario() {
       >
         <option value="user">Usuario</option>
         <option value="ti">TI</option>
-        <option value="admin">Administrador</option>
+        
       </select>
 
       <button

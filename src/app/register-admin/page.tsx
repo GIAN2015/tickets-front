@@ -1,7 +1,9 @@
 "use client";
-import router from "next/router";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Building2, Mail, Phone, KeyRound, User, FileText } from "lucide-react";
+
 export default function RegisterAdminPage() {
   const [form, setForm] = useState({
     razonSocial: "",
@@ -14,13 +16,12 @@ export default function RegisterAdminPage() {
     smtpPassword: "",
   });
 
-
+  const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const router = useRouter(); //
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -47,29 +48,141 @@ export default function RegisterAdminPage() {
     }
   };
 
-
   return (
-    <div className="max-w-lg mx-auto p-6 bg-white shadow rounded">
-      <h2 className="text-2xl font-bold mb-4 text-center">Registro Inicial Empresa</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <input name="razonSocial" placeholder="Razón Social" onChange={handleChange} className="w-full border p-2 rounded" />
-        <input name="telefono" placeholder="Teléfono" onChange={handleChange} className="w-full border p-2 rounded" />
-        <input name="correoContacto" placeholder="Correo de contacto" onChange={handleChange} className="w-full border p-2 rounded" />
-        <input name="ruc" placeholder="RUC" onChange={handleChange} className="w-full border p-2 rounded" />
-        <input name="adminNombre" placeholder="Nombre del Admin" onChange={handleChange} className="w-full border p-2 rounded" />
-        <input name="adminEmail" placeholder="Correo del Admin" type="email" onChange={handleChange} className="w-full border p-2 rounded" />
-        <input name="adminPassword" placeholder="Contraseña" type="password" onChange={handleChange} className="w-full border p-2 rounded" />
-        <input
-          name="smtpPassword"
-          placeholder="Contraseña de aplicación Gmail"
-          type="password"
-          onChange={handleChange}
-          className="w-full border p-2 rounded"
-        />
-        <button type="submit" className="w-full bg-green-600 text-white py-2 rounded" >
-          Registrar Empresa + Admin
-        </button>
-      </form>
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <div className="mx-auto w-12 h-12 flex items-center justify-center rounded-md bg-sky-600 text-white mb-3">
+            <Building2 className="w-6 h-6" />
+          </div>
+          <h2 className="text-xl font-semibold text-slate-900">
+            Registro Inicial de Empresa
+          </h2>
+          <p className="text-sm text-slate-500 mt-1">
+            Crea la empresa y su primer administrador
+          </p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Razón Social
+            </label>
+            <div className="relative">
+              <FileText className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+              <input
+                name="razonSocial"
+                onChange={handleChange}
+                placeholder="Mi Empresa SAC"
+                className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Teléfono
+            </label>
+            <div className="relative">
+              <Phone className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+              <input
+                name="telefono"
+                onChange={handleChange}
+                placeholder="999 888 777"
+                className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Correo de contacto
+            </label>
+            <div className="relative">
+              <Mail className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+              <input
+                type="email"
+                name="correoContacto"
+                onChange={handleChange}
+                placeholder="contacto@empresa.com"
+                className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              RUC
+            </label>
+            <div className="relative">
+              <FileText className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+              <input
+                name="ruc"
+                onChange={handleChange}
+                placeholder="12345678901"
+                className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+              />
+            </div>
+          </div>
+
+          {/* Admin info */}
+          <div className="pt-2 border-t border-slate-200">
+            <h3 className="text-sm font-medium text-slate-800 mb-2">Administrador</h3>
+
+            <div className="relative mb-3">
+              <User className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+              <input
+                name="adminNombre"
+                onChange={handleChange}
+                placeholder="Nombre completo"
+                className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+              />
+            </div>
+
+            <div className="relative mb-3">
+              <Mail className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+              <input
+                type="email"
+                name="adminEmail"
+                onChange={handleChange}
+                placeholder="admin@empresa.com"
+                className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+              />
+            </div>
+
+            <div className="relative mb-3">
+              <KeyRound className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+              <input
+                type="password"
+                name="adminPassword"
+                onChange={handleChange}
+                placeholder="Contraseña segura"
+                className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+              />
+            </div>
+
+            <div className="relative">
+              <KeyRound className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+              <input
+                type="password"
+                name="smtpPassword"
+                onChange={handleChange}
+                placeholder="Contraseña app Gmail"
+                className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-sky-600 text-white py-2.5 rounded-lg font-medium hover:bg-sky-700 transition-colors"
+          >
+            Registrar Empresa + Admin
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

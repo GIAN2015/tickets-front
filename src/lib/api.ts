@@ -1,8 +1,8 @@
 // src/lib/api.ts
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:3001/api'; // ← Agrega /api al final
-
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 const instance = axios.create({
   baseURL: API_BASE,
@@ -52,7 +52,7 @@ export async function getTickets(token: string) {
 
 
 export async function createTicket(formData: FormData, token: string) {
-  const response = await fetch('http://localhost:3001/api/tickets', {
+  const response = await fetch(`${API_BASE}/tickets`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -75,7 +75,7 @@ export async function createTicket(formData: FormData, token: string) {
 
 
 export async function getUsuarios(token: string) {
-  const res = await fetch('http://localhost:3001/api/users', {
+  const res = await fetch(`${API_BASE}/users`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -113,7 +113,10 @@ export async function getTicketHistory(id: number) {
   return res.data;
 }
 
-
+export async function getEmpresaById(EmpresaId: number | string) {
+  const res = await instance.get(`/empresas/${EmpresaId}`);
+  return res.data;
+}
 
 
 export const rechazarResolucionTicket = async (ticketId: number) => {
@@ -175,7 +178,7 @@ export async function registerEmpresaAdmin(data: {
   adminEmail: string;
   adminPassword: string;
 }) {
-  const res = await instance.post("api/auth/register", data);
+  const res = await instance.post("/auth/register", data);
   return res.data;
 }
 
