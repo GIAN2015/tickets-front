@@ -1,8 +1,46 @@
+// components/AuthGuard.tsx
 "use client";
 
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useAuthStore } from "./useAuthStore";
 
+
+/* ========= Config única de accesos ========= */
+export const publicRoutes = ["/login", "/register-admin"] as const;
+
+export const roleRoutes: Record<string, string[]> = {
+  admin: ["/usuarios"],                 // /usuarios y subrutas
+  user: ["/dashboard", "/tickets"],
+  ti: ["/dashboard", "/registro", "/tickets"],
+};
+
+/* ========= Utilidades de matching ========= */
+export function normalize(pattern: string) {
+  if (!pattern) return "/";
+  return pattern.startsWith("/") ? pattern : `/${pattern}`;
+}
+
+export function matches(pattern: string, pathname: string) {
+  const p = normalize(pattern);
+  const path = normalize(pathname);
+  return path === p || path.startsWith(p + "/");
+}
+
+export function canAccessPath(role: string | null | undefined, pathname: string) {
+  const path = normalize(pathname);
+  if ((publicRoutes as readonly string[]).some((r) => matches(r, path))) return true;
+  if (!role) return false;
+  const allowed = roleRoutes[role] || [];
+  return allowed.some((pat) => matches(pat, path));
+}
+
+/** Decide si mostrar un item de navegación según rol/href (para Sidebar) */
+export function canSeeNavItem(role: string | null | undefined, href: string) {
+  return canAccessPath(role, href);
+}
+
+/* ========= Guard ========= */
 type TokenPayload = {
   sub: number;
   username: string;
@@ -27,78 +65,55 @@ function parseJwt(token: string): TokenPayload | null {
   }
 }
 
-function normalize(pattern: string) {
-  if (!pattern) return "/";
-  return pattern.startsWith("/") ? pattern : `/${pattern}`;
-}
-
-function matches(pattern: string, pathname: string) {
-  const p = normalize(pattern);
-  return pathname === p || pathname.startsWith(p + "/");
-}
-
 export default function AuthGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-
-
   const prevPathRef = useRef<string | null>(null);
 
-
-  const publicRoutes = ["/login", "/register-admin"];
-  const roleRoutes: Record<string, string[]> = {
-    admin: ["/usuarios", "/registro"],
-    user: ["/dashboard", "/tickets"],
-    ti: ["/dashboard", "/registro", "/tickets"],
-  };
+  const token = useAuthStore((s) => s.token);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const clearAuth = useAuthStore((s) => s.clearAuth);
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    if (!hasHydrated) return;
 
-    if (!token && !publicRoutes.includes(pathname)) {
-      alert("No has iniciado sesión. Por favor inicia sesión para continuar.");
+    // Rutas públicas sin token
+    if (!token) {
+      const isPublic = (publicRoutes as readonly string[]).some((r) => matches(r, pathname));
+      if (!isPublic) {
+        alert("No has iniciado sesión. Por favor inicia sesión para continuar.");
+        router.replace("/login");
+      }
+      return;
+    }
+
+    // Con token: validar expiración
+    const decoded = parseJwt(token);
+    if (!decoded || decoded.exp * 1000 < Date.now()) {
+      clearAuth();
+      alert("Tu sesión ha expirado. Inicia sesión nuevamente.");
       router.replace("/login");
       return;
     }
 
-    if (token) {
-      const decoded = parseJwt(token);
+    // Verificar permisos por rol
+    const userRole = decoded.role?.toString().toLowerCase();
+    const permitted = canAccessPath(userRole, pathname);
 
-      if (!decoded || decoded.exp * 1000 < Date.now()) {
-        localStorage.removeItem("token");
-        alert("Tu sesión ha expirado. Inicia sesión nuevamente.");
-        router.replace("/login");
-        return;
-      }
-
-      const userRole = decoded.role;
-      const allowedPatterns = roleRoutes[userRole] || [];
-
-      const permitted =
-        publicRoutes.includes(pathname) ||
-        allowedPatterns.some((pat) => matches(pat, pathname));
-
-      if (!permitted) {
-
-        alert("No tienes permisos para acceder a esta página.");
-
-        const prev = prevPathRef.current;
-
-        if (prev && prev !== pathname) {
-          try {
-            router.push(prev);
-          } catch {
-
-            router.back();
-          }
-        } else {
-
+    if (!permitted) {
+      alert("No tienes permisos para acceder a esta página.");
+      const prev = prevPathRef.current;
+      if (prev && prev !== pathname) {
+        try {
+          router.push(prev);
+        } catch {
           router.replace("/login");
         }
+      } else {
+        router.replace("/login");
       }
     }
-  }, [pathname, router]);
-
+  }, [pathname, token, hasHydrated, clearAuth, router]);
 
   useEffect(() => {
     prevPathRef.current = pathname;

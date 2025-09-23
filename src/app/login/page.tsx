@@ -1,3 +1,4 @@
+// app/(auth)/login/page.tsx   <-- ajusta la ruta según tu proyecto
 "use client";
 
 import { useState } from "react";
@@ -5,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { getEmpresaById, login } from "@/lib/api";
 import { jwtDecode } from "jwt-decode";
 import { Loader2 } from "lucide-react";
+import { useAuthStore } from "@/components/useAuthStore";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -12,6 +14,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+
+  const setAuth = useAuthStore((s) => s.setAuth);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,22 +26,37 @@ export default function LoginPage() {
       const { access_token } = await login(username, password);
       const decoded: any = jwtDecode(access_token);
       console.log("Decoded JWT:", decoded);
-      const IDEmpresa = decoded.empresaId
-      const role = decoded.role;
-      const userName = decoded.username;
 
-      localStorage.setItem("token", access_token);
-      localStorage.setItem("role", role);
-      localStorage.setItem("userName", userName);
+      const IDEmpresa = decoded.empresaId ?? null;
+      const role = decoded.role ?? null;
+      const userName = decoded.username ?? decoded.sub ?? null;
+      const emailFromToken = decoded.email ?? null;
 
       
-      const empresa = await getEmpresaById(IDEmpresa);
-      const NombreEmpresa = empresa.razonSocial;
-      localStorage.setItem("Nombre_empresa", NombreEmpresa);
-      
-      if (role === "admin") router.push("/registro");
+      let NombreEmpresa: string | null = null;
+      if (IDEmpresa) {
+        try {
+          const empresa = await getEmpresaById(IDEmpresa);
+          NombreEmpresa = empresa?.razonSocial ?? null;
+        } catch (err) {
+          console.warn("No se pudo obtener empresa:", err);
+        }
+      }
+
+      const user = {
+        username: userName,
+        role,
+        empresaId: IDEmpresa,
+        empresaNombre: NombreEmpresa,
+        email: emailFromToken,
+      };
+
+      setAuth(access_token, user);
+
+      if (role === "admin") router.push("/usuarios");
       else router.push("/dashboard");
     } catch (err) {
+      console.error(err);
       setError("❌ Credenciales inválidas. Intenta nuevamente.");
     } finally {
       setLoading(false);
@@ -46,7 +65,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 flex items-center justify-center px-6 py-12">
-      {/* Decorative subtle shapes (don't enclose form) */}
+      {/* Decorative subtle shapes */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <svg className="hidden lg:block absolute -left-16 top-8 w-[520px] h-[520px] opacity-7" viewBox="0 0 520 520" fill="none">
           <circle cx="130" cy="120" r="180" fill="url(#g1)"></circle>
@@ -60,11 +79,10 @@ export default function LoginPage() {
       </div>
 
       <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-        {/* LEFT: minimal branding (visible on lg) */}
+        {/* LEFT: branding */}
         <aside className="hidden lg:flex flex-col justify-center gap-6 px-4">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 flex items-center justify-center rounded-md bg-slate-900 text-white">
-              {/* brand mark */}
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden>
                 <path d="M4 7a1 1 0 011-1h14a1 1 0 011 1v10a1 1 0 01-1 1H5a1 1 0 01-1-1V7z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M8 10h8M8 14h5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
@@ -94,7 +112,7 @@ export default function LoginPage() {
           </ul>
         </aside>
 
-        {/* RIGHT: form area (responsive) */}
+        {/* RIGHT: form */}
         <section className="flex items-center justify-center px-4">
           <div className="w-full max-w-md">
             <div className="mb-6">
@@ -102,7 +120,6 @@ export default function LoginPage() {
               <p className="mt-1 text-sm text-slate-500">Inicia sesión para acceder al panel de tickets</p>
             </div>
 
-            {/* error message (aria-live) */}
             {error && (
               <div role="alert" aria-live="assertive" className="mb-4 px-4 py-3 rounded-md bg-red-50 text-red-700 border border-red-100">
                 {error}
@@ -155,7 +172,6 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {/* subtle divider for desktop */}
             <div className="hidden sm:block my-6 border-t border-slate-100" />
 
             <div className="mt-6 text-sm text-slate-400 flex items-center justify-between">

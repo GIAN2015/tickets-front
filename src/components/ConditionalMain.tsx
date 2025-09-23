@@ -8,7 +8,7 @@ export default function ConditionalMain({ children }: { children: React.ReactNod
 
   return (
     <main
-      className={`flex-1 ${hideContainer ? "px-4 pt-6" : "px-6 py-8"}`}
+      className={`flex-1 ${hideContainer ? "" : "container mx-auto"}`}
     >
       <div className={hideContainer ? "" : "container mx-auto"}>
         {children}

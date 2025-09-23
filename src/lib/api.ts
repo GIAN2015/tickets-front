@@ -1,18 +1,20 @@
 // src/lib/api.ts
+import { useAuthStore } from '@/components/useAuthStore';
 import axios from 'axios';
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
+// Instancia de axios
 const instance = axios.create({
   baseURL: API_BASE,
-
 });
 
-// Interceptor para añadir el token automáticamente
+// Interceptor para añadir dinámicamente el token
 instance.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('token');
+    // Siempre obtenemos el token actualizado del store
+    const token = useAuthStore.getState().token;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -22,89 +24,34 @@ instance.interceptors.request.use((config) => {
 
 export default instance;
 
-// Funciones API
+/* =======================
+   FUNCIONES API
+========================== */
 
 export async function login(email: string, password: string) {
-  console.log('Enviando login:', { email, password });
-
-  const res = await instance.post('/auth/login', {
-    email,
-    password,
-  });
-
+  const res = await instance.post('/auth/login', { email, password });
   return res.data; // { access_token: string }
 }
 
-export async function getTickets(token: string) {
-  const res = await fetch(`${API_BASE}/tickets`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    console.error('Error en backend:', errorText);
-    throw new Error('Error al obtener tickets');
-  }
-  return res.json();
+export async function getTickets() {
+  const res = await instance.get('/tickets');
+  return res.data;
 }
 
-
-export async function createTicket(formData: FormData, token: string) {
-  const response = await fetch(`${API_BASE}/tickets`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
+export async function createTicket(formData: FormData) {
+  const res = await instance.post('/tickets', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
   });
-
-  if (!response.ok) {
-    throw new Error('Error al crear ticket');
-  }
-
-  return await response.json();
+  return res.data;
 }
 
-
-
-// lib/api.ts
-// lib/api.ts
-
-
-
-export async function getUsuarios(token: string) {
-  const res = await fetch(`${API_BASE}/users`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error('Error al obtener usuarios');
-  }
-
-  const data = await res.json();
-  return data;
+export async function getUsuarios() {
+  const res = await instance.get('/users');
+  return res.data;
 }
 
-// Confirma que el ticket fue resuelto por parte del usuario
 export async function confirmarResolucionTicket(ticketId: number) {
-  const token = localStorage.getItem('token');
-
-  const res = await instance.patch(`tickets/${ticketId}/confirmar`, {}, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  if (!res || res.status !== 200) {
-    throw new Error('Error al confirmar la resolución del ticket');
-  }
-
-  console.log("Respuesta del backend al confirmar:", res.data);
-
+  const res = await instance.patch(`/tickets/${ticketId}/confirmar`);
   return res.data;
 }
 
@@ -118,57 +65,26 @@ export async function getEmpresaById(EmpresaId: number | string) {
   return res.data;
 }
 
-
-export const rechazarResolucionTicket = async (ticketId: number) => {
-  const token = localStorage.getItem("token");
-
+export async function rechazarResolucionTicket(ticketId: number) {
   try {
-    const res = await instance.patch(
-      `/tickets/${ticketId}/rechazar`,
-      {},
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const res = await instance.patch(`/tickets/${ticketId}/rechazar`);
     return res.data;
   } catch (err: any) {
-    // Axios trae info detallada en err.response
     console.error("Error al rechazar resolución:", err?.response?.data || err);
     throw new Error(err?.response?.data?.message || "Error al rechazar resolución");
   }
-};
+}
 
-
-
-export const resetearRechazoResolucion = async (ticketId: number) => {
-  const token = localStorage.getItem('token');
-
-  const res = await instance.patch(
-    `/tickets/${ticketId}/reset-rechazo`, // nueva ruta backend
-    {},
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-
-  if (res.status >= 400) {
-    throw new Error('Error al resetear rechazo de resolución');
-  }
-
+export async function resetearRechazoResolucion(ticketId: number) {
+  const res = await instance.patch(`/tickets/${ticketId}/reset-rechazo`);
   return res.data;
-};
+}
 
 export async function getTicketById(ticketId: number | string) {
   const res = await instance.get(`/tickets/${ticketId}`);
   return res.data;
 }
 
-
-// Crear empresa + admin inicial
 export async function registerEmpresaAdmin(data: {
   razonSocial: string;
   telefono: string;
@@ -182,21 +98,12 @@ export async function registerEmpresaAdmin(data: {
   return res.data;
 }
 
-// Crear usuario
 export async function createUsuario(data: {
   username: string;
   email: string;
   password: string;
   role: string;
 }) {
-  const token = localStorage.getItem("token"); // o de donde lo guardes
-
-  const res = await instance.post("/users", data, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
+  const res = await instance.post("/users", data);
   return res.data;
 }
-

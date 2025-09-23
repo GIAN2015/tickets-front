@@ -4,28 +4,59 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import LogoutButton from "@/components/LogoutButton";
-import { Menu, X, Users, LayoutGrid, UserPlus, PlusSquare, ClipboardList, LogOut } from "lucide-react";
+
+import { canSeeNavItem } from "@/components/AuthGuard";
+import {
+  Menu,
+  X,
+  Users,
+  LayoutGrid,
+  PlusSquare,
+  ClipboardList,
+} from "lucide-react";
+import { useAuthStore } from "./useAuthStore";
+
 
 export default function Sidebar() {
+  
   const rawPath = usePathname();
   const [open, setOpen] = useState(false);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const token = useAuthStore((s) => s.token);
+  const userRole =
+    (useAuthStore((s) => s.user?.role)?.toString().toLowerCase() as string) ||
+    null;
 
-  if (!rawPath) return null; // defensivo
-  if (rawPath === "/login") return null;
-
-  const pathname = rawPath.replace(/\/+$/, "") || "/";
+  
+  const pathname = (rawPath?.replace(/\/+$/, "") || "/").toLowerCase();
 
   const isUsuarios = pathname === "/usuarios" || pathname.startsWith("/usuarios/");
   const isDashboard = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
-  const isRegistro = pathname === "/registro" || pathname.startsWith("/registro/");
   const isTicketsNew = pathname === "/tickets/new";
   let isMisTickets =
     pathname === "/tickets" ||
     (pathname.startsWith("/tickets/") && !pathname.startsWith("/tickets/new"));
+  if (isTicketsNew) isMisTickets = false;
+
+  // 🔹 Ítems posibles (sin useMemo para evitar hook extra)
+  const navItems = [
+    { href: "/usuarios",    label: "Usuarios",     icon: Users,        isActive: isUsuarios },
+    { href: "/dashboard",   label: "Dashboard",    icon: LayoutGrid,   isActive: isDashboard },
+    { href: "/tickets/new", label: "Nuevo Ticket", icon: PlusSquare,   isActive: isTicketsNew },
+    { href: "/tickets",     label: "Mis Tickets",  icon: ClipboardList, isActive: isMisTickets },
+  ];
 
   
-  if (isTicketsNew) isMisTickets = false;
+  const visibleItems = navItems.filter((item) => canSeeNavItem(userRole, item.href));
+
+  
+  const isLogin = pathname === "/login";
+  const shouldHide =
+    !hasHydrated || isLogin || !token || visibleItems.length === 0 || !rawPath;
+
+  if (shouldHide) {
+    return null;
+  }
 
   return (
     <>
@@ -61,90 +92,45 @@ export default function Sidebar() {
             </div>
           </div>
 
-          {/* Links */}
+          {/* Links filtrados por rol */}
           <ul className="flex-1 space-y-1">
-            <li>
-              <Link
-                href="/usuarios"
-                onClick={() => setOpen(false)}
-                aria-current={isUsuarios ? "page" : undefined}
-                className={`group flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium ${
-                  isUsuarios ? "bg-sky-100 text-sky-700" : "text-slate-700 hover:bg-slate-100"
-                }`}
-              >
-                <Users className={`w-4 h-4 ${isUsuarios ? "text-sky-600" : "text-slate-400"}`} />
-                Usuarios
-              </Link>
-            </li>
-
-            <li>
-              <Link
-                href="/dashboard"
-                onClick={() => setOpen(false)}
-                aria-current={isDashboard ? "page" : undefined}
-                className={`group flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium ${
-                  isDashboard ? "bg-sky-100 text-sky-700" : "text-slate-700 hover:bg-slate-100"
-                }`}
-              >
-                <LayoutGrid className={`w-4 h-4 ${isDashboard ? "text-sky-600" : "text-slate-400"}`} />
-                Dashboard
-              </Link>
-            </li>
-
-            <li>
-              <Link
-                href="/registro"
-                onClick={() => setOpen(false)}
-                aria-current={isRegistro ? "page" : undefined}
-                className={`group flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium ${
-                  isRegistro ? "bg-sky-100 text-sky-700" : "text-slate-700 hover:bg-slate-100"
-                }`}
-              >
-                <UserPlus className={`w-4 h-4 ${isRegistro ? "text-sky-600" : "text-slate-400"}`} />
-                Registro
-              </Link>
-            </li>
-
-            <li>
-              <Link
-                href="/tickets/new"
-                onClick={() => setOpen(false)}
-                aria-current={isTicketsNew ? "page" : undefined}
-                className={`group flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium ${
-                  isTicketsNew ? "bg-sky-100 text-sky-700" : "text-slate-700 hover:bg-slate-100"
-                }`}
-              >
-                <PlusSquare className={`w-4 h-4 ${isTicketsNew ? "text-sky-600" : "text-slate-400"}`} />
-                Nuevo Ticket
-              </Link>
-            </li>
-
-            <li>
-              <Link
-                href="/tickets"
-                onClick={() => setOpen(false)}
-                aria-current={isMisTickets ? "page" : undefined}
-                className={`group flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium ${
-                  isMisTickets ? "bg-sky-100 text-sky-700" : "text-slate-700 hover:bg-slate-100"
-                }`}
-              >
-                <ClipboardList className={`w-4 h-4 ${isMisTickets ? "text-sky-600" : "text-slate-400"}`} />
-                Mis Tickets
-              </Link>
-            </li>
+            {visibleItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    aria-current={item.isActive ? "page" : undefined}
+                    className={`group flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium ${
+                      item.isActive ? "bg-sky-100 text-sky-700" : "text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 ${item.isActive ? "text-sky-600" : "text-slate-400"}`} />
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
 
-          {/* Logout at bottom */}
+          {/* Logout (opcional)
           <div className="border-t border-slate-100 mt-4 pt-4">
             <div className="px-3">
-
-                <LogoutButton />
+              <LogoutButton />
             </div>
           </div>
+          */}
         </nav>
       </aside>
 
-      {open && <div className="fixed inset-0 z-20 bg-black/30 lg:hidden" onClick={() => setOpen(false)} aria-hidden />}
+      {open && (
+        <div
+          className="fixed inset-0 z-20 bg-black/30 lg:hidden"
+          onClick={() => setOpen(false)}
+          aria-hidden
+        />
+      )}
     </>
   );
 }
