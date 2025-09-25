@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || 'https://tickets-backend-fw5d.onrender.com/api';
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 const instance = axios.create({
   baseURL: API_BASE,
@@ -113,7 +113,10 @@ export async function getTicketHistory(id: number) {
   return res.data;
 }
 
-
+export async function getEmpresaById(EmpresaId: number | string) {
+  const res = await instance.get(`/empresas/${EmpresaId}`);
+  return res.data;
+}
 
 
 export const rechazarResolucionTicket = async (ticketId: number) => {
@@ -196,4 +199,3 @@ export async function createUsuario(data: {
 
   return res.data;
 }
-

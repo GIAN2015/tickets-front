@@ -8,6 +8,9 @@ import Footer from "@/components/Footer";
 import ConditionalMain from "@/components/ConditionalMain";
 import Sidebar from "@/components/sidebar";
 
+import Header from "@/components/Header";
+
+
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
@@ -25,6 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="min-h-screen flex">
             <Sidebar />
             <div className="flex-1 flex flex-col min-h-screen">
+              <Header />
               <ConditionalMain>{children}</ConditionalMain>
               <Footer />
             </div>

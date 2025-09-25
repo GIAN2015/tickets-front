@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { login } from "@/lib/api";
+import { getEmpresaById, login } from "@/lib/api";
 import { jwtDecode } from "jwt-decode";
 import { Loader2 } from "lucide-react";
 
@@ -21,11 +21,20 @@ export default function LoginPage() {
     try {
       const { access_token } = await login(username, password);
       const decoded: any = jwtDecode(access_token);
+      console.log("Decoded JWT:", decoded);
+      const IDEmpresa = decoded.empresaId
       const role = decoded.role;
+      const userName = decoded.username;
 
       localStorage.setItem("token", access_token);
       localStorage.setItem("role", role);
+      localStorage.setItem("userName", userName);
 
+      
+      const empresa = await getEmpresaById(IDEmpresa);
+      const NombreEmpresa = empresa.razonSocial;
+      localStorage.setItem("Nombre_empresa", NombreEmpresa);
+      
       if (role === "admin") router.push("/registro");
       else router.push("/dashboard");
     } catch (err) {
