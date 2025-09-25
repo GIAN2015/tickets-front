@@ -25,9 +25,19 @@ export default function RegisterAdminPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Debes iniciar sesión como super-admi");
+        router.push("/login");
+        return;
+      }
+
       const res = await fetch("https://tickets-backend-fw5d.onrender.com/api/auth/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // 👈 ahora protegido
+        },
         body: JSON.stringify(form),
       });
 
@@ -35,11 +45,10 @@ export default function RegisterAdminPage() {
 
       if (!res.ok) {
         console.error("❌ Error en registro:", data);
-        alert("Error: " + JSON.stringify(data.message));
+        alert("Error: " + (data?.message || "No autorizado"));
         return;
       }
 
-      console.log("✅ Respuesta backend:", data);
       alert("Empresa + Admin creados correctamente ✅");
       router.push("/login");
     } catch (error) {
@@ -47,6 +56,7 @@ export default function RegisterAdminPage() {
       alert("Error al registrar");
     }
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">

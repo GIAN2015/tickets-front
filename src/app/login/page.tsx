@@ -2,12 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { getEmpresaById, login } from "@/lib/api";
+import { login, getEmpresaById } from "@/lib/api"; // <-- usa /users/empresa
 import { jwtDecode } from "jwt-decode";
 import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -19,25 +19,34 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { access_token } = await login(username, password);
+      // 1) Login
+      const { access_token } = await login(email, password);
       const decoded: any = jwtDecode(access_token);
-      console.log("Decoded JWT:", decoded);
-      const IDEmpresa = decoded.empresaId
-      const role = decoded.role;
-      const userName = decoded.username;
 
+      const role: string = decoded.role;
+      const userName: string = decoded.username;
+      const empresaId: number | undefined = decoded.empresaId;
+
+      // 2) Guarda sesión mínima
       localStorage.setItem("token", access_token);
       localStorage.setItem("role", role);
       localStorage.setItem("userName", userName);
+      if (empresaId) localStorage.setItem("empresaId", String(empresaId));
 
-      
-      const empresa = await getEmpresaById(IDEmpresa);
-      const NombreEmpresa = empresa.razonSocial;
-      localStorage.setItem("Nombre_empresa", NombreEmpresa);
-      
-      if (role === "admin") router.push("/registro");
+      // 3) Cargar empresa del usuario (no bloquea el flujo si falla)
+      try {
+        const empresa = await getEmpresaById(access_token);
+        if (empresa?.razonSocial) {
+          localStorage.setItem("Nombre_empresa", empresa.razonSocial);
+        }
+      } catch {
+        console.warn("No se pudo cargar la empresa; continuar de todos modos.");
+      }
+
+      // 4) Redirección por rol (solo super-admi entra a /register-admin)
+      if (role === "super-admi") router.push("/register-admin");
       else router.push("/dashboard");
-    } catch (err) {
+    } catch {
       setError("❌ Credenciales inválidas. Intenta nuevamente.");
     } finally {
       setLoading(false);
@@ -46,7 +55,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 flex items-center justify-center px-6 py-12">
-      {/* Decorative subtle shapes (don't enclose form) */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <svg className="hidden lg:block absolute -left-16 top-8 w-[520px] h-[520px] opacity-7" viewBox="0 0 520 520" fill="none">
           <circle cx="130" cy="120" r="180" fill="url(#g1)"></circle>
@@ -60,14 +68,12 @@ export default function LoginPage() {
       </div>
 
       <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-        {/* LEFT: minimal branding (visible on lg) */}
         <aside className="hidden lg:flex flex-col justify-center gap-6 px-4">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 flex items-center justify-center rounded-md bg-slate-900 text-white">
-              {/* brand mark */}
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path d="M4 7a1 1 0 011-1h14a1 1 0 011 1v10a1 1 0 01-1 1H5a1 1 0 01-1-1V7z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M8 10h8M8 14h5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M4 7a1 1 0 011-1h14a1 1 0 011 1v10a1 1 0 01-1 1H5a1 1 0 01-1-1V7z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M8 10h8M8 14h5" stroke="white" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
             <div>
@@ -77,11 +83,9 @@ export default function LoginPage() {
           </div>
 
           <h3 className="mt-6 text-2xl font-bold text-slate-800 leading-tight">Resuelve con claridad</h3>
-
           <p className="text-sm text-slate-500 max-w-xs">
-            Historial por usuario, asignación por roles y notificaciones. Interfaz ligera y eficiente para equipos de soporte.
+            Historial por usuario, asignación por roles y notificaciones. Interfaz ligera y eficiente.
           </p>
-
           <ul className="mt-4 space-y-2 text-sm text-slate-600">
             <li className="flex items-start gap-2">
               <span className="mt-0.5 inline-block w-2 h-2 bg-sky-500 rounded-full"></span>
@@ -94,7 +98,6 @@ export default function LoginPage() {
           </ul>
         </aside>
 
-        {/* RIGHT: form area (responsive) */}
         <section className="flex items-center justify-center px-4">
           <div className="w-full max-w-md">
             <div className="mb-6">
@@ -102,7 +105,6 @@ export default function LoginPage() {
               <p className="mt-1 text-sm text-slate-500">Inicia sesión para acceder al panel de tickets</p>
             </div>
 
-            {/* error message (aria-live) */}
             {error && (
               <div role="alert" aria-live="assertive" className="mb-4 px-4 py-3 rounded-md bg-red-50 text-red-700 border border-red-100">
                 {error}
@@ -111,17 +113,17 @@ export default function LoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4" aria-label="formulario de inicio de sesión">
               <div>
-                <label htmlFor="username" className="block text-sm font-medium text-slate-700 mb-2">
-                  Usuario
+                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
+                  Correo
                 </label>
                 <input
-                  id="username"
-                  name="username"
+                  id="email"
+                  name="email"
                   autoComplete="username"
-                  type="text"
+                  type="email"
                   placeholder="correo@ejemplo.com"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                   className="w-full px-4 py-3 bg-white border border-slate-200 rounded-md text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-200 transition"
                   aria-invalid={!!error}
@@ -155,7 +157,6 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {/* subtle divider for desktop */}
             <div className="hidden sm:block my-6 border-t border-slate-100" />
 
             <div className="mt-6 text-sm text-slate-400 flex items-center justify-between">
