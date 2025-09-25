@@ -1,29 +1,15 @@
 'use client';
 
-import { getUsuarios, resetearRechazoResolucion } from '@/lib/api';
 import { useEffect, useState } from 'react';
-import emailjs from '@emailjs/browser';
-import { title } from 'process';
-interface Usuario {
-  id: number;
-  nombre: string;
-  email: string;
-  role: string;
-}
+import instance from '@/lib/api';
+import { resetearRechazoResolucion } from '@/lib/api';
+import { Check, AlertTriangle, Upload, Save } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils'; // opcional si tienes util de classnames
+import { useAuthStore } from './useAuthStore';
 
-export default function TicketStatusChanger({
-  ticket,
-  ticketId,
-  currentStatus,
-  currentPrioridad,
-  onStatusChanged,
-  onPrioridadChanged,
-  confirmadoPorUsuario,
-  rechazadoPorUsuario,
-  message,
-  refreshHistorial,
-
-}: {
+type Props = {
   ticket: any;
   ticketId: number;
   message?: string;
@@ -31,259 +17,263 @@ export default function TicketStatusChanger({
   currentPrioridad: string;
   onStatusChanged: (newStatus: string) => void;
   onPrioridadChanged: (newPrioridad: string) => void;
-  confirmadoPorUsuario: boolean;
-  rechazadoPorUsuario: boolean;
-  refreshHistorial?: () => Promise<void>; // <--- tipo
-}) {
+  confirmadoPorUsuario?: boolean;
+  rechazadoPorUsuario?: boolean;
+  /** Si la vista de historial necesita refrescar, lo llamamos al terminar */
+  refreshHistorial?: () => Promise<void>;
+};
+
+export default function TicketStatusChanger({
+  ticket,
+  ticketId,
+  message,
+  currentStatus,
+  currentPrioridad,
+  onStatusChanged,
+  onPrioridadChanged,
+  confirmadoPorUsuario = false,
+  rechazadoPorUsuario = false,
+  refreshHistorial,
+}: Props) {
+  // 🔐 Rol desde zustand
+  const role = (useAuthStore((s) => s.user?.role) || '')
+    .toString()
+    .toLowerCase();
+
+  const isTI = role === 'ti';
+
+  // 🧠 Estado local (controlado)
   const [status, setStatus] = useState(currentStatus);
   const [prioridad, setPrioridad] = useState(currentPrioridad);
-  const [role, setRole] = useState<string | null>(null);
-  const [showRechazoMessage, setShowRechazoMessage] = useState(rechazadoPorUsuario);
-  const [rechazadoLocal, setRechazadoLocal] = useState(rechazadoPorUsuario);
+  const [showRechazoMessage, setShowRechazoMessage] =
+    useState(!!rechazadoPorUsuario);
   const [archivos, setArchivos] = useState<File[]>([]);
   const [aceptado, setAceptado] = useState(!!ticket?.usuarioSolicitante);
+  const [saving, setSaving] = useState(false);
 
-  const [dbStatus, setDbStatus] = useState(currentStatus);
-
-
-
-
-  // Lista completa de estados
+  // Estados permitidos
   const allOptions = ['no iniciado', 'asignado', 'en proceso', 'resuelto', 'completado'];
 
-  // Opciones visibles dependiendo del rol y confirmación
-  const visibleOptions = role === 'ti'
-    ? allOptions.filter(option => {
-      if (option === 'completado') {
-        return confirmadoPorUsuario; // Solo si fue confirmado por el usuario
-      }
-      return true;
-    })
+  // Solo TI ve y mueve estados; `completado` solo si usuario lo confirmó
+  const visibleOptions = isTI
+    ? allOptions.filter((opt) => (opt === 'completado' ? !!confirmadoPorUsuario : true))
     : [];
+
   useEffect(() => {
-    setRechazadoLocal(rechazadoPorUsuario);
+    setShowRechazoMessage(!!rechazadoPorUsuario);
   }, [rechazadoPorUsuario]);
 
-  useEffect(() => {
-    console.log('confirmadoPorUsuario:', confirmadoPorUsuario);
-  }, [confirmadoPorUsuario]);
+  const handleFilesChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+    const files = e.currentTarget.files;
+    if (!files?.length) return;
+    const toAdd = Array.from(files);
+    const combined = archivos.concat(toAdd).slice(0, 3); // máx 3
+    setArchivos(combined);
+    e.currentTarget.value = ''; // permite volver a seleccionar los mismos archivos
+  };
 
-  useEffect(() => {
-
-    const storedRole = localStorage.getItem('role');
-    if (storedRole === 'ti' || storedRole === 'user') {
-      setRole(storedRole);
-    }
-  }, []);
+  const removeFile = (idx: number) => {
+    setArchivos((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   const handleUpdate = async () => {
     try {
-      const token = localStorage.getItem('token');
+      setSaving(true);
 
-      // Resetear el rechazo de resolución
+      // Si hubo rechazo, lo reseteamos antes de actualizar
       await resetearRechazoResolucion(ticketId);
 
-      let bodyToSend;
-      let headersToSend: Record<string, string> = {
-        Authorization: `Bearer ${token}`,
-      };
-
-      if (archivos?.length && archivos.length > 0) {
-        // Si hay archivo → multipart/form-data
+      if (archivos.length > 0) {
         const formData = new FormData();
         formData.append('status', status);
         formData.append('prioridad', prioridad);
         formData.append('message', message || '');
-        archivos.forEach((file) => {
-          formData.append('archivos', file); // 👈 debe llamarse igual que en FilesInterceptor('archivos')
-        });
-        bodyToSend = formData;
-        // No se define Content-Type para FormData
+        archivos.forEach((f) => formData.append('archivos', f));
+
+        const { data: updated } = await instance.patch(
+          `/tickets/${ticketId}`,
+          formData,
+          { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+
+        // Actualiza estado en el padre
+        onStatusChanged(updated.status);
+        onPrioridadChanged(updated.prioridad);
       } else {
-        // Si NO hay archivo → JSON
-        headersToSend['Content-Type'] = 'application/json';
-        bodyToSend = JSON.stringify({
+        const { data: updated } = await instance.patch(`/tickets/${ticketId}`, {
           status,
           prioridad,
           message,
         });
+
+        onStatusChanged(updated.status);
+        onPrioridadChanged(updated.prioridad);
       }
 
-      const res = await fetch(`http://localhost:3001/api/tickets/${ticketId}`, {
-        method: 'PATCH',
-        headers: headersToSend,
-        body: bodyToSend,
-      });
-
-      // intenta parsear como JSON siempre
-      let data: any;
-      try {
-        data = await res.json();
-      } catch {
-        data = null;
-      }
-
-      if (!res.ok) {
-        throw new Error(
-          `Error al actualizar (${res.status}): ${data?.message || 'Sin detalle'}`
-        );
-      }
-
-      // aquí sí tienes tu objeto actualizado
-      // aquí sí tienes tu objeto actualizado
-      setRechazadoLocal(false);
-      const updated = data;
-
-      // 👇 limpiar los archivos para que no se acumulen en el próximo update
+      // Limpia y oculta mensaje de rechazo
       setArchivos([]);
-
-
-      // Enviar correo al creador del ticket
-
-
-      // Actualizamos estado local y ocultamos el mensaje de rechazo
-      onStatusChanged(updated.status);
-      onPrioridadChanged(updated.prioridad);
       setShowRechazoMessage(false);
 
+      // Refresca historial si se envió
+      await refreshHistorial?.();
 
-
-      // actualizas estados locales
-      onStatusChanged?.(updated.status);
-      onPrioridadChanged?.(updated.prioridad);
-
-
-
-
-      window.location.reload();
-      alert('Ticket actualizado con éxito y correo enviado');
+      alert('✅ Ticket actualizado correctamente');
     } catch (err: any) {
-      console.error("❌ Error en handleSubmit:", err);
-      if (err instanceof Error) {
-        console.error("📄 Mensaje:", err.message);
-      } else {
-        console.error("📄 Detalle (stringificado):", JSON.stringify(err));
-      }
-      alert('Error al crear ticket o enviar correo');
+      console.error('❌ Error al actualizar:', err?.response?.data || err);
+      alert(err?.response?.data?.message || 'No se pudo actualizar el ticket.');
+    } finally {
+      setSaving(false);
     }
-
   };
 
+  const aceptarTicket = async () => {
+    try {
+      const { data } = await instance.patch(`/tickets/${ticketId}/aceptar`);
+      setAceptado(true);
+      await refreshHistorial?.();
+      alert('✅ Ahora eres el usuario solicitante del ticket.');
+    } catch (err: any) {
+      console.error(err?.response?.data || err);
+      alert(err?.response?.data?.message || 'No se pudo aceptar el ticket.');
+    }
+  };
 
+  // Si no es TI, no mostramos controles (solo avisos)
+  if (!isTI) {
+    return (
+      <>
+        {rechazadoPorUsuario && (
+          <p className="mt-2 text-sm text-rose-600 font-medium">
+            ⚠️ El usuario rechazó la resolución del ticket.
+          </p>
+        )}
+      </>
+    );
+  }
 
   return (
-    <>
-
-      {role === 'ti' && (
-        <>
-          {rechazadoPorUsuario && (
-            <p className="text-red-600 font-semibold">
-              ⚠️ El usuario rechazó la resolución del ticket.
+    <div className="mt-4 space-y-4">
+      {/* Aviso de rechazo */}
+      {showRechazoMessage && (
+        <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-rose-700">
+          <AlertTriangle className="w-4 h-4 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold">El usuario rechazó la resolución.</p>
+            <p className="text-xs">
+              Al guardar cambios, se reinicia el estado de rechazo.
             </p>
-          )}
-
-          <div>
-            <label className="text-sm">Estado:</label>
-            <select
-              className="ml-2 border px-2 py-1"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              {visibleOptions.map(option => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
           </div>
-
-          <div>
-            <label className="text-sm">Prioridad:</label>
-            <select
-              className="ml-2 border px-2 py-1"
-              value={prioridad}
-              onChange={(e) => setPrioridad(e.target.value)}
-            >
-              <option value="muy_bajo">Muy Baja</option>
-              <option value="bajo">Baja</option>
-              <option value="media">Media</option>
-              <option value="alta">Alta</option>
-              <option value="muy_alta">Muy Alta</option>
-            </select>
-          </div>
-        </>
-      )}
-      {role === "ti" && !aceptado && (
-        <div className="mt-4 p-4 border rounded bg-yellow-50">
-          <p className="mb-2 font-semibold text-yellow-700">
-            ⚠️ Este ticket aún no tiene un usuario solicitante asignado.
-          </p>
-          <button
-            onClick={async () => {
-              try {
-                const token = localStorage.getItem("token");
-                const res = await fetch(
-                  `http://localhost:3001/api/tickets/${ticketId}/aceptar`,
-                  {
-                    method: "PATCH",
-                    headers: { Authorization: `Bearer ${token}` },
-                  }
-                );
-
-                if (!res.ok) {
-                  const err = await res.json();
-                  throw new Error(err.message || "No se pudo aceptar el ticket");
-                }
-
-                const updatedTicket = await res.json();
-                alert("✅ Ahora eres el usuario solicitante del ticket");
-
-                setAceptado(true); // 🔹 Oculta el mensaje
-                await refreshHistorial?.();
-              } catch (error: any) {
-                alert("❌ Error al aceptar ticket: " + error.message);
-              }
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            ✅ Aceptar Ticket
-          </button>
         </div>
       )}
 
+      {/* Aceptar ticket (si TI y sin solicitante) */}
+      {!aceptado && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3">
+          <p className="text-amber-800 text-sm mb-2">
+            ⚠️ Este ticket aún no tiene un usuario solicitante asignado.
+          </p>
+          <Button
+            type="button"
+            onClick={aceptarTicket}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
+            <Check className="w-4 h-4 mr-2" />
+            Aceptar Ticket
+          </Button>
+        </div>
+      )}
 
+      {/* Controles de estado/prioridad */}
+      <div className="grid sm:grid-cols-2 gap-4">
+        <div>
+          <Label className="text-slate-700 text-sm">Estado</Label>
+          <select
+            className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+          >
+            {visibleOptions.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+          {status === 'completado' && !confirmadoPorUsuario && (
+            <p className="mt-1 text-xs text-slate-500">
+              * “Completado” requiere confirmación del usuario.
+            </p>
+          )}
+        </div>
 
+        <div>
+          <Label className="text-slate-700 text-sm">Prioridad</Label>
+          <select
+            className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+            value={prioridad}
+            onChange={(e) => setPrioridad(e.target.value)}
+          >
+            <option value="muy_bajo">Muy Baja</option>
+            <option value="bajo">Baja</option>
+            <option value="media">Media</option>
+            <option value="alta">Alta</option>
+            <option value="muy_alta">Muy Alta</option>
+          </select>
+        </div>
+      </div>
 
-      {dbStatus !== 'completado' && (
-        <>
-          <label className="block mt-4 mb-2">
-            <span className="text-sm">Archivos adjuntos (máx 3):</span>
+      {/* Adjuntos */}
+      <div>
+        <Label className="text-slate-700 text-sm">Adjuntar archivos (máx. 3)</Label>
+        <div className="mt-1 flex items-center gap-2">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+            <Upload className="w-4 h-4" />
+            Subir
             <input
               type="file"
               multiple
-              accept=".jpg,.png,.pdf,.docx,.xlsx" // opcional limitar tipos
-              onChange={(e) => {
-                const files = e.target.files ? Array.from(e.target.files) : [];
-                if (files.length > 3) {
-                  alert("Solo puedes subir un máximo de 3 archivos");
-                  return;
-                }
-                setArchivos(files);
-              }}
-
-              className="mt-1"
+              accept=".jpg,.png,.pdf,.docx,.xlsx"
+              onChange={handleFilesChange}
+              className="hidden"
             />
           </label>
+          <span className="text-xs text-slate-500">
+            Se reemplazan/unen hasta un máximo de 3.
+          </span>
+        </div>
 
-          <button
-            onClick={handleUpdate}
-            className="bg-green-600 text-white px-3 py-1 rounded mt-2"
-          >
-            Guardar Cambios
-          </button>
-        </>
-      )}
-    </>
+        {archivos.length > 0 && (
+          <ul className="mt-3 space-y-1">
+            {archivos.map((f, idx) => (
+              <li
+                key={`${f.name}-${idx}`}
+                className="flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
+              >
+                <span className="truncate">{f.name}</span>
+                <button
+                  type="button"
+                  onClick={() => removeFile(idx)}
+                  className="text-rose-600 hover:underline"
+                >
+                  Quitar
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Guardar */}
+      <div className="flex justify-end">
+        <Button
+          type="button"
+          onClick={handleUpdate}
+          disabled={saving}
+          className="bg-sky-600 hover:bg-sky-700 text-white"
+        >
+          <Save className="w-4 h-4 mr-2" />
+          {saving ? 'Guardando...' : 'Guardar cambios'}
+        </Button>
+      </div>
+    </div>
   );
-
 }

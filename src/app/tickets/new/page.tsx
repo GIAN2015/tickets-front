@@ -1,10 +1,20 @@
 'use client';
-import { ArrowLeft, FileUp, Tag, User, Layers, Flag, Type, X } from "lucide-react";
-import { useState, useEffect } from 'react';
+
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createTicket } from '@/lib/api';
-import { jwtDecode } from 'jwt-decode';
+import instance from '@/lib/api';
 import { motion } from 'framer-motion';
+import {
+  ArrowLeft,
+  FileUp,
+  Tag,
+  User,
+  Layers,
+  Flag,
+  Type,
+  X,
+} from 'lucide-react';
+
 import {
   Card,
   CardContent,
@@ -22,37 +32,40 @@ import {
   SelectItem,
   SelectValue,
 } from '@/components/ui/select';
+import { useAuthStore } from '@/components/useAuthStore';
 
-import emailjs from '@emailjs/browser';
-interface DecodedUser {
-  id: number;
-  role: 'user' | 'ti' | 'admin';
-  nombre: string;
-  email: string;
-}
+type TipoTicket = 'requerimiento' | 'incidencia' | 'consulta';
+type Prioridad = 'muy_bajo' | 'bajo' | 'media' | 'alta' | 'muy_alta';
 
 interface ApiUser {
   id: number;
   username?: string;
-  email: string;
+  email?: string;
 }
 
 export default function NewTicketPage() {
   const router = useRouter();
+
+  // 🔐 Auth desde zustand (sin localStorage ni jwtDecode)
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const token = useAuthStore((s) => s.token);
+  const role = (useAuthStore((s) => s.user?.role) || '').toString().toLowerCase();
+
+  // 📄 Estado del form
   const [archivos, setArchivos] = useState<File[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [prioridad, setPrioridad] = useState('media');
+  const [prioridad, setPrioridad] = useState<Prioridad>('media');
   const [categoria, setCategoria] = useState('mantenimiento');
-  const [tipo, setTipo] = useState<'requerimiento' | 'incidencia' | 'consulta'>('incidencia');
-  const [archivo, setArchivo] = useState<File | null>(null);
+  const [tipo, setTipo] = useState<TipoTicket>('incidencia');
 
-  const [user, setUser] = useState<DecodedUser | null>(null);
-
-  // 👇 NUEVO: estado para usuarios y el solicitante seleccionado
+  // 👥 Solo TI: seleccionar solicitante
   const [usuarios, setUsuarios] = useState<ApiUser[]>([]);
-  const [usuarioSolicitanteId, setUsuarioSolicitanteId] = useState('');
+  const [usuarioSolicitanteId, setUsuarioSolicitanteId] = useState<string>('');
 
+  const [submitting, setSubmitting] = useState(false);
+
+  // Opciones
   const categorias = [
     { label: '🛠 Mantenimiento', value: 'mantenimiento' },
     { label: '💻 Hardware', value: 'hardware' },
@@ -61,149 +74,130 @@ export default function NewTicketPage() {
     { label: '📦 Otros', value: 'otros' },
   ];
 
-  const tipos = [
+  const tipos: { label: string; value: TipoTicket }[] = [
     { label: '📌 Requerimiento', value: 'requerimiento' },
     { label: '⚠ Incidencia', value: 'incidencia' },
     { label: '💬 Consulta', value: 'consulta' },
   ];
 
-  const handleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      // Convertimos FileList en array y los agregamos
-      setArchivos((prev) => [...prev, ...Array.from(e.target.files!)]);
-    }
-  };
-  const eliminarArchivo = (index: number) => {
-    setArchivos((prev) => prev.filter((_, i) => i !== index));
-  };
+  // Cargar usuarios (solo TI)
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    const decoded: any = jwtDecode(token);
-    setUser({
-      id: Number(decoded.sub),
-      role: decoded.role?.toLowerCase(),
-      nombre: decoded.username,
-      email: decoded.email,
-    });
-  }, []);
-
-  // Si es TI, carga la lista de usuarios desde el backend
-
-  // Si es TI, carga la lista de usuarios desde el backend
-  // Si es TI, carga la lista de usuarios de su empresa desde el backend
-  useEffect(() => {
-    if (user?.role !== "ti") return;
-
-    const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!hasHydrated || !token) return;
+    if (role !== 'ti') return;
 
     (async () => {
       try {
-        const res = await fetch("http://localhost:3001/api/users/by-empresa", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-
-        if (Array.isArray(data)) {
-          setUsuarios(data);
-        } else if (data?.users) {
-          setUsuarios(data.users); // por si backend devuelve { users: [...] }
-        } else {
-          setUsuarios([]);
-        }
+        const res = await instance.get('/users/by-empresa');
+        const data = Array.isArray(res.data) ? res.data : res.data?.users ?? [];
+        setUsuarios(data);
       } catch (err) {
-        console.error("Error al obtener usuarios", err);
+        console.error('Error al obtener usuarios', err);
         setUsuarios([]);
       }
     })();
-  }, [user]);
+  }, [hasHydrated, token, role]);
 
+  // Manejo de archivos
+  const handleFilesChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+    const files = e.currentTarget.files; // preferible a e.target
+    if (!files || files.length === 0) return; // <-- guard
 
-  async function handleSubmit(e: React.FormEvent) {
+    setArchivos((prev) => [...prev, ...Array.from(files)]);
+    e.currentTarget.value = ""; // opcional: permite volver a elegir el mismo archivo
+  };
+
+  const eliminarArchivo = (index: number) => {
+    setArchivos((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Submit
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const token: any = localStorage.getItem('token');
+    if (!hasHydrated || !token) return;
 
     try {
-      const decoded: any = token ? jwtDecode(token) : null;
-      const creadoPorId = Number(decoded.sub);
+      setSubmitting(true);
 
-      // Usa FormData en lugar de ticketData plano
+      // FormData para envío con archivos
       const formData = new FormData();
-      formData.append('title', title);
-      formData.append('description', description);
+      formData.append('title', title.trim());
+      formData.append('description', description.trim());
       formData.append('prioridad', prioridad);
       formData.append('categoria', categoria);
-      formData.append('tipo', tipo); // valor fijo
-      formData.append('creatorId', String(creadoPorId)); // no usado directamente en el backend, pero por si acaso
+      formData.append('tipo', tipo);
 
-      if (archivos.length > 0) {
-        archivos.forEach((file) => {
-          formData.append('archivos', file); // 👈 usa el mismo nombre que en el backend
-        });
-      }
+      // Archivos
+      archivos.forEach((file) => {
+        formData.append('archivos', file); // nombre esperado por tu backend
+      });
 
-
-      if (decoded.role.toLowerCase() === 'ti') {
+      // Si TI, debe indicar solicitante
+      if (role === 'ti') {
         if (!usuarioSolicitanteId) {
           alert('Debes seleccionar un usuario solicitante');
+          setSubmitting(false);
           return;
         }
         formData.append('usuarioSolicitanteId', usuarioSolicitanteId);
       }
 
-      // ✅ Llamada con FormData correctamente
+      // Envío con axios instance (token va en interceptors)
+      await instance.post('/tickets', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
 
-
-
-
-
-      // ✅ En tu handleSubmit, justo después de:
-      const ticket = await createTicket(formData, token);
-
-
-
-
-
+      alert('✅ Ticket creado correctamente');
       router.push('/dashboard');
-
-
-
-      alert('Ticket creado y notificación enviada con éxito');
-      router.push('/dashboard');
-    } catch (err) {
-      console.error(err);
-      alert('Error al crear ticket o enviar correo');
+    } catch (err: any) {
+      console.error(err?.response?.data || err);
+      alert(err?.response?.data?.message || 'Error al crear ticket');
+    } finally {
+      setSubmitting(false);
     }
+  };
+
+  // Esperar hidratación para evitar flicker
+  if (!hasHydrated) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-12">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 w-64 bg-slate-200 rounded" />
+          <div className="h-10 w-full bg-slate-200 rounded" />
+          <div className="h-32 w-full bg-slate-200 rounded" />
+        </div>
+      </div>
+    );
   }
 
   return (
     <motion.div
-      className="max-w-2xl mx-auto mt-12"
-      initial={{ opacity: 0, y: 20 }}
+      className="max-w-3xl mx-auto px-4 py-8"
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
+      transition={{ duration: 0.25 }}
     >
-      <Card className="shadow-xl border border-gray-200">
+      <Card className="shadow-sm border border-slate-200">
         <CardHeader className="flex items-center justify-between">
-          <CardTitle className="text-2xl font-bold flex items-center gap-2 text-green-700">
-            <Layers className="w-6 h-6" /> Crear Ticket
+          <CardTitle className="text-2xl font-semibold text-slate-900 flex items-center gap-2">
+            <Layers className="w-6 h-6 text-sky-600" /> Crear Ticket
           </CardTitle>
           <Button
-            variant="ghost"
-            className="text-green-700 hover:text-green-900"
-            onClick={() => router.push("/dashboard")}
+            type="button"
+            variant="outline"
+            onClick={() => router.push('/dashboard')}
+            className="inline-flex items-center gap-2"
           >
-            <ArrowLeft className="w-5 h-5 mr-1" /> Volver
+            <ArrowLeft className="w-4 h-4" />
+            Volver
           </Button>
         </CardHeader>
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <Label className="flex items-center gap-2">
-                <Tag className="w-4 h-4" /> Título
+              <Label className="flex items-center gap-2 text-slate-700">
+                <Tag className="w-4 h-4 text-slate-500" />
+                Título
               </Label>
               <Input
                 type="text"
@@ -211,130 +205,143 @@ export default function NewTicketPage() {
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Ej. Problema con la impresora"
                 required
+                className="mt-1"
               />
             </div>
 
             <div>
-              <Label className="flex items-center gap-2">
-                <Type className="w-4 h-4" /> Descripción
+              <Label className="flex items-center gap-2 text-slate-700">
+                <Type className="w-4 h-4 text-slate-500" />
+                Descripción
               </Label>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe el problema en detalle..."
                 required
+                className="mt-1 min-h-[110px]"
               />
             </div>
 
-            <div>
-              <Label className="flex items-center gap-2">
-                <Layers className="w-4 h-4" /> Categoría
-              </Label>
-              <Select value={categoria} onValueChange={setCategoria}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona categoría" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categorias.map((cat) => (
-                    <SelectItem key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* 👇 Visible solo para rol TI */}
-            {user?.role === "ti" && (
+            <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <Label className="flex items-center gap-2">
-                  <User className="w-4 h-4" /> Usuario solicitante
+                <Label className="flex items-center gap-2 text-slate-700">
+                  <Layers className="w-4 h-4 text-slate-500" />
+                  Categoría
                 </Label>
-                <Select
-                  value={usuarioSolicitanteId}
-                  onValueChange={setUsuarioSolicitanteId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="-- Selecciona un usuario --" />
+                <Select value={categoria} onValueChange={setCategoria}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Selecciona categoría" />
                   </SelectTrigger>
                   <SelectContent>
-                    {usuarios.map((u) => (
-                      <SelectItem key={u.id} value={String(u.id)}>
-                        {u.username || u.email}
+                    {categorias.map((cat) => (
+                      <SelectItem key={cat.value} value={cat.value}>
+                        {cat.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            )}
 
-            <div>
-              <Label className="flex items-center gap-2">
-                <Type className="w-4 h-4" /> Tipo de Ticket
-              </Label>
-              <Select
-                value={tipo}
-                onValueChange={(val: "requerimiento" | "incidencia" | "consulta") =>
-                  setTipo(val)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tipos.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div>
+                <Label className="flex items-center gap-2 text-slate-700">
+                  <Flag className="w-4 h-4 text-slate-500" />
+                  Prioridad
+                </Label>
+                <Select value={prioridad} onValueChange={(v) => setPrioridad(v as Prioridad)}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Selecciona prioridad" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="muy_bajo">Muy Bajo</SelectItem>
+                    <SelectItem value="bajo">Bajo</SelectItem>
+                    <SelectItem value="media">Media</SelectItem>
+                    <SelectItem value="alta">Alta</SelectItem>
+                    <SelectItem value="muy_alta">Muy Alta</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="flex items-center gap-2 text-slate-700">
+                  <Type className="w-4 h-4 text-slate-500" />
+                  Tipo de Ticket
+                </Label>
+                <Select
+                  value={tipo}
+                  onValueChange={(val) => setTipo(val as TipoTicket)}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Selecciona tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tipos.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Solo para TI: seleccionar solicitante */}
+              {role === 'ti' && (
+                <div>
+                  <Label className="flex items-center gap-2 text-slate-700">
+                    <User className="w-4 h-4 text-slate-500" />
+                    Usuario solicitante
+                  </Label>
+                  <Select
+                    value={usuarioSolicitanteId}
+                    onValueChange={setUsuarioSolicitanteId}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="-- Selecciona un usuario --" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {usuarios.map((u) => (
+                        <SelectItem key={u.id} value={String(u.id)}>
+                          {u.username || u.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div>
-              <Label className="flex items-center gap-2">
-                <Flag className="w-4 h-4" /> Prioridad
-              </Label>
-              <Select value={prioridad} onValueChange={setPrioridad}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona prioridad" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="muy_bajo">Muy Bajo</SelectItem>
-                  <SelectItem value="bajo">Bajo</SelectItem>
-                  <SelectItem value="media">Media</SelectItem>
-                  <SelectItem value="alta">Alta</SelectItem>
-                  <SelectItem value="muy_alta">Muy Alta</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label className="flex items-center gap-2">
-                <FileUp className="w-4 h-4" /> Adjuntar archivos (opcional)
+              <Label className="flex items-center gap-2 text-slate-700">
+                <FileUp className="w-4 h-4 text-slate-500" />
+                Adjuntar archivos (opcional)
               </Label>
               <Input
                 type="file"
                 accept=".pdf,image/*"
                 multiple
                 onChange={handleFilesChange}
+                className="mt-1"
               />
 
-              {/* Lista de archivos seleccionados */}
               {archivos.length > 0 && (
-                <ul className="mt-2 space-y-1">
-                  {archivos.map((archivo, index) => (
+                <ul className="mt-3 space-y-1">
+                  {archivos.map((f, idx) => (
                     <li
-                      key={index}
-                      className="flex items-center justify-between bg-gray-100 px-3 py-2 rounded-md text-sm"
+                      key={idx}
+                      className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-md px-3 py-2 text-sm"
                     >
-                      <span>{archivo.name}</span>
+                      <span className="truncate">{f.name}</span>
                       <Button
+                        type="button"
                         variant="ghost"
                         size="icon"
-                        onClick={() => eliminarArchivo(index)}
+                        onClick={() => eliminarArchivo(idx)}
+                        aria-label="Eliminar archivo"
+                        className="hover:bg-rose-50"
                       >
-                        <X className="w-4 h-4 text-red-500" />
+                        <X className="w-4 h-4 text-rose-600" />
                       </Button>
                     </li>
                   ))}
@@ -344,9 +351,10 @@ export default function NewTicketPage() {
 
             <Button
               type="submit"
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-lg"
+              disabled={submitting}
+              className="w-full bg-sky-600 hover:bg-sky-700 text-white font-medium py-2.5 rounded-lg disabled:opacity-60"
             >
-              Crear Ticket
+              {submitting ? 'Creando...' : 'Crear Ticket'}
             </Button>
           </form>
         </CardContent>
@@ -354,5 +362,3 @@ export default function NewTicketPage() {
     </motion.div>
   );
 }
-
-
