@@ -10,6 +10,7 @@ import { useAuthStore } from "./useAuthStore";
 export const publicRoutes = ["/login", "/register-admin"] as const;
 
 export const roleRoutes: Record<string, string[]> = {
+  "super-admi": ["/usuarios", "/dashboard", "/registro", "/tickets"], 
   admin: ["/usuarios"],                 // /usuarios y subrutas
   user: ["/dashboard", "/tickets"],
   ti: ["/dashboard", "/registro", "/tickets"],

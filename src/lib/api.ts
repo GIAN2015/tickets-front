@@ -3,7 +3,7 @@ import { useAuthStore } from '@/components/useAuthStore';
 import axios from 'axios';
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api' ;
 
 // Instancia de axios
 const instance = axios.create({
@@ -13,7 +13,7 @@ const instance = axios.create({
 // Interceptor para añadir dinámicamente el token
 instance.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    // Siempre obtenemos el token actualizado del store
+    // Siempre obtenemos el token actualizado del storea
     const token = useAuthStore.getState().token;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
