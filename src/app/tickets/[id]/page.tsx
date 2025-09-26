@@ -258,21 +258,7 @@ export default function TicketDetailPage() {
           </div>
         </div>
 
-        {/* Mensaje para historial/actualización (solo si no está completado) */}
-        {ticket.status !== "completado" && (
-          <div className="mt-6">
-            <label className="text-sm text-slate-700">Mensaje para historial</label>
-            <input
-              value={mensaje}
-              onChange={(e) => setMensaje(e.target.value)}
-              className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm
-                         focus:outline-none focus-visible:outline-none
-                         focus:ring-0 focus:border-sky-500"
-              type="text"
-              placeholder="Escribe un comentario para registrar en el historial"
-            />
-          </div>
-        )}
+   
 
         {/* Controles TI / Adjuntos / Estado con TicketStatusChanger */}
         <div className="mt-6">
