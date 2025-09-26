@@ -44,6 +44,7 @@ type HistItem = {
   adjuntoNombre?: string[] | null;
 };
 
+
 /* ========= Badges helpers ========= */
 const statusBadge = (s?: string) => {
   const map: Record<string, string> = {
@@ -289,7 +290,7 @@ export default function TicketDetailPage() {
               {ticket.archivoNombre.map((file, idx) => (
                 <li key={`${file}-${idx}`}>
                   <a
-                    href={`http://localhost:3001/tickets/${file}`}
+                    href={`https://tickets-backend-fw5d.onrender.com/tickets/${file}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sky-700 hover:underline text-sm"
@@ -418,7 +419,7 @@ export default function TicketDetailPage() {
                           {h.adjuntoNombre.map((file, idx) => (
                             <li key={`${file}-${idx}`}>
                               <a
-                                href={`http://localhost:3001/tickets/${file}`}
+                                href={`https://tickets-backend-fw5d.onrender.com/tickets/${file}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="hover:underline"
