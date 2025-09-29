@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import instance from "@/lib/api";
 import TicketStatusChanger from "@/components/TicketStatusChanger";
 import { useAuthStore } from "@/components/useAuthStore";
+import AdminSLAForm from "@/components/AdminSLAForm";
 
 import {
   ArrowRightIcon,
@@ -15,6 +16,11 @@ import {
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
+
+/* ========= Config de archivos ========= */
+const FILES_BASE =
+  process.env.NEXT_PUBLIC_FILES_BASE ||
+  "https://tickets-backend-fw5d.onrender.com";
 
 /* ========= Tipos ========= */
 type Ticket = {
@@ -30,6 +36,12 @@ type Ticket = {
   usuarioSolicitante?: { id: number; username?: string; email?: string } | null;
   creator?: { id: number; username?: string; email?: string } | null;
   archivoNombre?: string[];
+  // SLA
+  slaTotalMinutos?: number;
+  slaStartAt?: string;      // ISO string
+  slaGreenEndAt?: string;   // ISO string
+  slaYellowEndAt?: string;  // ISO string
+  deadlineAt?: string;      // ISO string
 };
 
 type HistItem = {
@@ -43,7 +55,6 @@ type HistItem = {
   mensaje?: string | null;
   adjuntoNombre?: string[] | null;
 };
-
 
 /* ========= Badges helpers ========= */
 const statusBadge = (s?: string) => {
@@ -79,6 +90,66 @@ const prioridadBadge = (p?: string) => {
   return map[(p || "").toLowerCase()] || map.media;
 };
 
+/* ========= SLA helpers ========= */
+function computeSlaPhase(ticket: Ticket) {
+  if (!ticket.slaStartAt || !ticket.deadlineAt) {
+    return { phase: "sin_sla" as const, progress: 0, color: "#94a3b8" };
+  }
+  const now = Date.now();
+  const start = new Date(ticket.slaStartAt).getTime();
+  const deadline = new Date(ticket.deadlineAt).getTime();
+  const greenEnd = ticket.slaGreenEndAt ? new Date(ticket.slaGreenEndAt).getTime() : start;
+  const yellowEnd = ticket.slaYellowEndAt ? new Date(ticket.slaYellowEndAt).getTime() : greenEnd;
+
+  const total = Math.max(1, deadline - start);
+  const elapsed = Math.max(0, Math.min(total, now - start));
+  const progress = Math.round((elapsed / total) * 100);
+
+  let phase: "verde" | "amarillo" | "rojo";
+  if (now <= greenEnd) phase = "verde";
+  else if (now <= yellowEnd) phase = "amarillo";
+  else phase = "rojo";
+
+  const color =
+    phase === "verde" ? "#10b981" : phase === "amarillo" ? "#f59e0b" : "#ef4444";
+
+  return { phase, progress, color };
+}
+
+function phaseLabel(phase: "verde" | "amarillo" | "rojo" | "sin_sla") {
+  switch (phase) {
+    case "verde": return "Dentro de SLA";
+    case "amarillo": return "Riesgo de vencer";
+    case "rojo": return "SLA vencido";
+    default: return "SLA no configurado";
+  }
+}
+
+function phaseBadgeClass(phase: "verde" | "amarillo" | "rojo" | "sin_sla") {
+  const map: Record<string, string> = {
+    verde: "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200",
+    amarillo: "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200",
+    rojo: "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200",
+    sin_sla: "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-50 text-slate-600 border border-slate-200",
+  };
+  return map[phase] || map.sin_sla;
+}
+
+function formatRemaining(deadlineISO?: string) {
+  if (!deadlineISO) return "—";
+  const ms = new Date(deadlineISO).getTime() - Date.now();
+  if (ms <= 0) return "0h";
+  const minutes = Math.floor(ms / 60000);
+  const d = Math.floor(minutes / (60 * 24));
+  const h = Math.floor((minutes % (60 * 24)) / 60);
+  const m = minutes % 60;
+  const parts = [];
+  if (d) parts.push(`${d}d`);
+  if (h) parts.push(`${h}h`);
+  if (m && !d) parts.push(`${m}m`);
+  return parts.join(" ") || "0m";
+}
+
 /* ========= Página ========= */
 export default function TicketDetailPage() {
   const router = useRouter();
@@ -93,8 +164,6 @@ export default function TicketDetailPage() {
   const [loading, setLoading] = useState(true);
   const [loadingHist, setLoadingHist] = useState(true);
   const [mensaje, setMensaje] = useState("");
-
-  const ticketIdNum = useMemo(() => (paramId ? Number(paramId) : NaN), [paramId]);
 
   const fetchTicket = useCallback(async () => {
     if (!paramId) return;
@@ -188,6 +257,11 @@ export default function TicketDetailPage() {
     );
   }
 
+  // SLA visual
+  const { phase, progress, color } = computeSlaPhase(ticket);
+  const slaBadge = phaseBadgeClass(phase);
+  const remaining = formatRemaining(ticket.deadlineAt);
+
   return (
     <div className="max-w-5xl mx-auto p-6 md:p-8 space-y-8">
       {/* Toolbar superior */}
@@ -240,6 +314,36 @@ export default function TicketDetailPage() {
             </span>
           </div>
 
+          {/* SLA card */}
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+            <span className="block text-slate-500">SLA</span>
+            <div className="space-y-2">
+              <span className={slaBadge}>{phaseLabel(phase)}</span>
+              {ticket.deadlineAt && (
+                <div className="text-xs text-slate-500">
+                  Tiempo restante: <span className="font-medium">{remaining}</span>
+                </div>
+              )}
+              <div className="h-2 bg-slate-200 rounded overflow-hidden">
+                <div
+                  className="h-2 transition-all"
+                  style={{ width: `${progress}%`, background: color }}
+                />
+              </div>
+
+              {/* Botón solo para admin (cambia a ["admin","ti"].includes(userRole) si quieres permitir a TI) */}
+              {userRole === "admin" && (
+                <div className="pt-1">
+                  <AdminSLAForm
+                    ticketId={ticket.id}
+                    currentTotalMin={ticket.slaTotalMinutos}
+                    onSaved={refreshTodo}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
             <span className="block text-slate-500">Solicitante</span>
             <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
@@ -259,8 +363,6 @@ export default function TicketDetailPage() {
           </div>
         </div>
 
-   
-
         {/* Controles TI / Adjuntos / Estado con TicketStatusChanger */}
         <div className="mt-6">
           <TicketStatusChanger
@@ -270,7 +372,9 @@ export default function TicketDetailPage() {
             currentPrioridad={ticket.prioridad}
             confirmadoPorUsuario={ticket.confirmadoPorUsuario}
             rechazadoPorUsuario={ticket.rechazadoPorUsuario}
-            onStatusChanged={(newStatus) => setTicket((prev) => (prev ? { ...prev, status: newStatus } : prev))}
+            onStatusChanged={(newStatus) =>
+              setTicket((prev) => (prev ? { ...prev, status: newStatus } : prev))
+            }
             onPrioridadChanged={(newPrioridad) =>
               setTicket((prev) => (prev ? { ...prev, prioridad: newPrioridad } : prev))
             }
@@ -290,7 +394,7 @@ export default function TicketDetailPage() {
               {ticket.archivoNombre.map((file, idx) => (
                 <li key={`${file}-${idx}`}>
                   <a
-                    href={`https://tickets-backend-fw5d.onrender.com/tickets/${file}`}
+                    href={`${FILES_BASE}/tickets/${file}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sky-700 hover:underline text-sm"
@@ -304,24 +408,26 @@ export default function TicketDetailPage() {
         ) : null}
 
         {/* Acciones del usuario (confirmar / rechazar) */}
-        {userRole === "user" && ticket.status === "resuelto" && !ticket.confirmadoPorUsuario && (
-          <div className="mt-6 flex flex-col sm:flex-row gap-3">
-            <Button
-              onClick={confirmarResolucion}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-            >
-              Confirmar resolución
-            </Button>
-            {!ticket.rechazadoPorUsuario && (
+        {userRole === "user" &&
+          ticket.status === "resuelto" &&
+          !ticket.confirmadoPorUsuario && (
+            <div className="mt-6 flex flex-col sm:flex-row gap-3">
               <Button
-                onClick={rechazarResolucion}
-                className="bg-rose-600 hover:bg-rose-700 text-white"
+                onClick={confirmarResolucion}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
               >
-                Rechazar resolución
+                Confirmar resolución
               </Button>
-            )}
-          </div>
-        )}
+              {!ticket.rechazadoPorUsuario && (
+                <Button
+                  onClick={rechazarResolucion}
+                  className="bg-rose-600 hover:bg-rose-700 text-white"
+                >
+                  Rechazar resolución
+                </Button>
+              )}
+            </div>
+          )}
       </div>
 
       {/* Historial de cambios */}
@@ -419,7 +525,7 @@ export default function TicketDetailPage() {
                           {h.adjuntoNombre.map((file, idx) => (
                             <li key={`${file}-${idx}`}>
                               <a
-                                href={`https://tickets-backend-fw5d.onrender.com/tickets/${file}`}
+                                href={`${FILES_BASE}/tickets/${file}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="hover:underline"
@@ -439,7 +545,7 @@ export default function TicketDetailPage() {
         )}
       </div>
 
-      {/* Aviso si no hay privilegios para controles TI (opcional) */}
+      {/* Aviso sin privilegios */}
       {userRole !== "ti" && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800 text-sm flex items-start gap-2">
           <ExclamationTriangleIcon className="h-5 w-5 mt-0.5" />
