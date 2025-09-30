@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 
 /* ========= Config de archivos ========= */
 const FILES_BASE =
-  process.env.NEXT_PUBLIC_FILES_BASE || "http://localhost:3001"; // ajusta en prod
+  process.env.NEXT_PUBLIC_FILES_BASE || "https://tickets-backend-fw5d.onrender.com"; // ajusta en prod
 
 /* ========= Tipos ========= */
 type Ticket = {
