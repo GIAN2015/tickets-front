@@ -1,5 +1,5 @@
 'use client';
-//hewf
+
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -23,12 +23,36 @@ interface Ticket {
   title: string;
   description: string;
   status: string;           // 'completado' | ...
-  prioridad: string;        // 'muy_bajo' | 'bajo' | 'media' | 'alta' | 'muy_alta'
+  prioridad: string;
   tipo: string;
   categoria: string;
   creator: { username?: string; email?: string };
+  assignedTo?: { username?: string; email?: string };
   createdAt: string;
   updatedAt: string;
+}
+
+// ===== Helpers =====
+function fmtDateTimeLima(date: string) {
+  return new Date(date).toLocaleString('es-PE', {
+    timeZone: 'America/Lima',
+    dateStyle: 'short',
+    timeStyle: 'short',
+  });
+}
+
+function humanDuration(start: string, end: string): string | null {
+  const diffMs = new Date(end).getTime() - new Date(start).getTime();
+  if (diffMs <= 0) return null;
+
+  const mins = Math.floor(diffMs / 60000);
+  const hours = Math.floor(mins / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days} día(s) ${hours % 24}h ${mins % 60}m`;
+  if (hours > 0) return `${hours}h ${mins % 60}m`;
+  if (mins > 0) return `${mins}m`;
+  return null;
 }
 
 export default function TicketsCompletadosPage() {
@@ -43,7 +67,7 @@ export default function TicketsCompletadosPage() {
   // filtros UI controlados
   const [selectedUser, setSelectedUser] = useState('');
   const [searchId, setSearchId] = useState('');
-  const [applyKey, setApplyKey] = useState(0); // fuerza recalcular memo al hacer click en "Buscar"
+  const [applyKey, setApplyKey] = useState(0);
 
   // cargar tickets completados
   useEffect(() => {
@@ -78,7 +102,7 @@ export default function TicketsCompletadosPage() {
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [tickets]);
 
-  // aplicar filtros (con botón)
+  // aplicar filtros
   const filteredTickets = useMemo(() => {
     const idq = searchId.trim();
     const uq = selectedUser.trim();
@@ -88,13 +112,9 @@ export default function TicketsCompletadosPage() {
       const byId = idq ? String(t.id).includes(idq) : true;
       return byUser && byId;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tickets, applyKey]); // se recalcula solo cuando presionas "Buscar"
+  }, [tickets, applyKey]);
 
-  const aplicarFiltro = () => {
-    // Cambiar applyKey para disparar el memo (así no filtramos en tiempo real).
-    setApplyKey((k) => k + 1);
-  };
+  const aplicarFiltro = () => setApplyKey((k) => k + 1);
 
   const exportarExcel = () => {
     const datos = filteredTickets.map((t) => ({
@@ -106,8 +126,10 @@ export default function TicketsCompletadosPage() {
       Tipo: t.tipo,
       Categoría: t.categoria,
       Creador: t.creator?.username || t.creator?.email,
-      Fecha_Creación: new Date(t.createdAt).toLocaleString(),
-      Fecha_Completado: new Date(t.updatedAt).toLocaleString(),
+      Asignado: t.assignedTo?.username || t.assignedTo?.email || '—',
+      Fecha_Creación: fmtDateTimeLima(t.createdAt),
+      Fecha_Completado: fmtDateTimeLima(t.updatedAt),
+      Duración: humanDuration(t.createdAt, t.updatedAt) || '—',
     }));
 
     const ws = XLSX.utils.json_to_sheet(datos);
@@ -191,8 +213,7 @@ export default function TicketsCompletadosPage() {
             <select
               value={selectedUser}
               onChange={(e) => setSelectedUser(e.target.value)}
-              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm
-                         focus:outline-none focus-visible:outline-none focus:ring-0 focus:border-sky-500"
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"
             >
               <option value="">Todos</option>
               {users.map((u) => (
@@ -209,8 +230,7 @@ export default function TicketsCompletadosPage() {
               value={searchId}
               onChange={(e) => setSearchId(e.target.value)}
               placeholder="Ej. 1024"
-              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm
-                         focus:outline-none focus-visible:outline-none focus:ring-0 focus:border-sky-500"
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm"
             />
           </div>
 
@@ -257,63 +277,79 @@ export default function TicketsCompletadosPage() {
           </Link>
         </div>
       ) : (
-        // Tabla responsiva
+        // Tabla responsiva (sin espacios en <tr>)
         <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
           <table className="min-w-full text-sm">
             <thead>
               <tr className="bg-slate-50 text-slate-700">
-                <th className="text-left px-4 py-3 font-medium">ID</th>
-                <th className="text-left px-4 py-3 font-medium">Título</th>
-                <th className="text-left px-4 py-3 font-medium">Estado</th>
-                <th className="text-left px-4 py-3 font-medium">Prioridad</th>
-                <th className="text-left px-4 py-3 font-medium">Tipo</th>
-                <th className="text-left px-4 py-3 font-medium">Categoría</th>
-                <th className="text-left px-4 py-3 font-medium">Creador</th>
-                <th className="text-left px-4 py-3 font-medium">Creado</th>
-                <th className="text-left px-4 py-3 font-medium">Completado</th>
-                <th className="text-left px-4 py-3 font-medium">Acciones</th>
+                {[
+                  'ID',
+                  'Título',
+                  'Estado',
+                  'Prioridad',
+                  'Tipo',
+                  'Categoría',
+                  'Creador',
+                  'Asignado a',
+                  'Creado',
+                  'Completado',
+                  'Duración',
+                  'Acciones',
+                ].map((label) => (
+                  <th key={label} className="text-left px-4 py-3 font-medium">
+                    {label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {filteredTickets.map((t) => (
-                <tr key={t.id} className="border-t border-slate-100 hover:bg-slate-50/60">
-                  <td className="px-4 py-3 text-slate-700">{t.id}</td>
-                  <td className="px-4 py-3 text-slate-900 font-medium">{t.title}</td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-50 text-slate-700 border border-slate-200">
-                      {t.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={badgeByPriority[(t.prioridad || '').toLowerCase()] || 'text-slate-700 text-xs'}>
-                      {t.prioridad}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-700">{t.tipo}</td>
-                  <td className="px-4 py-3 text-slate-700">{t.categoria}</td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                      <User className="w-3.5 h-3.5" />
-                      {t.creator?.username || t.creator?.email}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-700">
-                    {new Date(t.createdAt).toLocaleString()}
-                  </td>
-                  <td className="px-4 py-3 text-slate-700">
-                    {new Date(t.updatedAt).toLocaleString()}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/tickets/${t.id}`}
-                      className="inline-flex items-center gap-1 text-sky-700 hover:underline"
-                    >
-                      <Paperclip className="w-3.5 h-3.5" />
-                      Ver historial
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+              {filteredTickets.map((t) => {
+                const dur = humanDuration(t.createdAt, t.updatedAt);
+                return (
+                  <tr key={t.id} className="border-t border-slate-100 hover:bg-slate-50/60">
+                    {[
+                      <td key="id" className="px-4 py-3 text-slate-700">{t.id}</td>,
+                      <td key="title" className="px-4 py-3 text-slate-900 font-medium">{t.title}</td>,
+                      <td key="status" className="px-4 py-3">
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-50 text-slate-700 border border-slate-200">
+                          {t.status}
+                        </span>
+                      </td>,
+                      <td key="prio" className="px-4 py-3">
+                        <span className={badgeByPriority[(t.prioridad || '').toLowerCase()] || 'text-slate-700 text-xs'}>
+                          {t.prioridad}
+                        </span>
+                      </td>,
+                      <td key="tipo" className="px-4 py-3 text-slate-700">{t.tipo}</td>,
+                      <td key="cat" className="px-4 py-3 text-slate-700">{t.categoria}</td>,
+                      <td key="creator" className="px-4 py-3">
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                          <User className="w-3.5 h-3.5" />
+                          {t.creator?.username || t.creator?.email}
+                        </span>
+                      </td>,
+                      <td key="assigned" className="px-4 py-3">
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                          <User className="w-3.5 h-3.5" />
+                          {t.assignedTo?.username || t.assignedTo?.email || '—'}
+                        </span>
+                      </td>,
+                      <td key="created" className="px-4 py-3 text-slate-700">{fmtDateTimeLima(t.createdAt)}</td>,
+                      <td key="done" className="px-4 py-3 text-slate-700">{fmtDateTimeLima(t.updatedAt)}</td>,
+                      <td key="dur" className="px-4 py-3 text-slate-700">{dur || '—'}</td>,
+                      <td key="actions" className="px-4 py-3">
+                        <Link
+                          href={`/tickets/${t.id}`}
+                          className="inline-flex items-center gap-1 text-sky-700 hover:underline"
+                        >
+                          <Paperclip className="w-3.5 h-3.5" />
+                          Ver historial
+                        </Link>
+                      </td>,
+                    ]}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

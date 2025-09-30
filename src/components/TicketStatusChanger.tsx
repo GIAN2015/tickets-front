@@ -173,18 +173,6 @@ export default function TicketStatusChanger({
         </div>
       )}
 
-      {/* Aceptar ticket (solo TI) */}
-      {isTI && !aceptado && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3">
-          <p className="text-amber-800 text-sm mb-2">
-            ⚠️ Este ticket aún no tiene un usuario solicitante asignado.
-          </p>
-          <Button type="button" onClick={aceptarTicket} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-            <Check className="w-4 h-4 mr-2" />
-            Aceptar Ticket
-          </Button>
-        </div>
-      )}
 
       {/* Estado/Prioridad (solo TI). Mantiene editable aunque elija "completado"; se cierra tras guardar */}
       {canChangeState && (

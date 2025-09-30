@@ -13,50 +13,68 @@ import {
   LayoutGrid,
   PlusSquare,
   ClipboardList,
+  UserCheck, // 👈 Asignar Tickets
 } from "lucide-react";
 import { useAuthStore } from "./useAuthStore";
 
+type Role = "admin" | "user" | "ti" | "super-admi" | null;
 
 export default function Sidebar() {
-  
   const rawPath = usePathname();
   const [open, setOpen] = useState(false);
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const token = useAuthStore((s) => s.token);
-  const userRole =
-    (useAuthStore((s) => s.user?.role)?.toString().toLowerCase() as string) ||
-    null;
+  const userRole: Role =
+    ((useAuthStore((s) => s.user?.role)?.toString().toLowerCase() as Role) ??
+      null) as Role;
 
-  
   const pathname = (rawPath?.replace(/\/+$/, "") || "/").toLowerCase();
 
   const isUsuarios = pathname === "/usuarios" || pathname.startsWith("/usuarios/");
   const isDashboard = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
   const isTicketsNew = pathname === "/tickets/new";
+  const isAsignar = pathname === "/tickets/asignar" || pathname.startsWith("/tickets/asignar/");
   let isMisTickets =
     pathname === "/tickets" ||
-    (pathname.startsWith("/tickets/") && !pathname.startsWith("/tickets/new"));
-  if (isTicketsNew) isMisTickets = false;
+    (pathname.startsWith("/tickets/") &&
+      !pathname.startsWith("/tickets/new") &&
+      !pathname.startsWith("/tickets/asignar"));
+  if (isTicketsNew || isAsignar) isMisTickets = false;
 
-  // 🔹 Ítems posibles (sin useMemo para evitar hook extra)
   const navItems = [
-    { href: "/usuarios",    label: "Usuarios",     icon: Users,        isActive: isUsuarios },
-    { href: "/dashboard",   label: "Dashboard",    icon: LayoutGrid,   isActive: isDashboard },
-    { href: "/tickets/new", label: "Nuevo Ticket", icon: PlusSquare,   isActive: isTicketsNew },
-    { href: "/tickets",     label: "Mis Tickets",  icon: ClipboardList, isActive: isMisTickets },
+    { href: "/usuarios", label: "Usuarios", icon: Users, isActive: isUsuarios },
+    { href: "/dashboard", label: "Dashboard", icon: LayoutGrid, isActive: isDashboard },
+    {
+      href: "/tickets/new",
+      label: "Nuevo Ticket",
+      icon: PlusSquare,
+      isActive: isTicketsNew,
+      allowedRoles: ["admin", "user"], // 👈 TI no lo ve
+    },
+    { href: "/tickets", label: "Mis Tickets", icon: ClipboardList, isActive: isMisTickets },
+    {
+      href: "/tickets/asignar",
+      label: "Asignar Tickets",
+      icon: UserCheck,
+      isActive: isAsignar,
+      allowedRoles: ["admin", "super-admi"], // 👈 solo admin/super
+    },
   ];
 
-  
-  const visibleItems = navItems.filter((item) => canSeeNavItem(userRole, item.href));
+  // 1) por rol
+  const byRole = navItems.filter((item) => {
+    if (!item.allowedRoles) return true;
+    return userRole ? item.allowedRoles.includes(userRole) : false;
+  });
 
-  
+  // 2) por guard adicional (si lo usas)
+  const visibleItems = byRole.filter((item) => canSeeNavItem(userRole ?? null, item.href));
+
   const isLogin = pathname === "/login";
   const shouldHide =
     !hasHydrated || isLogin || !token || visibleItems.length === 0 || !rawPath;
 
-  if (shouldHide) {
-    return null;
-  }
+  if (shouldHide) return null;
 
   return (
     <>
@@ -71,7 +89,7 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* Sidebar / slide-over */}
+      {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-30 transform transition-transform duration-200 ease-in-out
           ${open ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 lg:static lg:inset-auto lg:transform-none
@@ -92,7 +110,7 @@ export default function Sidebar() {
             </div>
           </div>
 
-          {/* Links filtrados por rol */}
+          {/* Links */}
           <ul className="flex-1 space-y-1">
             {visibleItems.map((item) => {
               const Icon = item.icon;
@@ -113,23 +131,11 @@ export default function Sidebar() {
               );
             })}
           </ul>
-
-          {/* Logout (opcional)
-          <div className="border-t border-slate-100 mt-4 pt-4">
-            <div className="px-3">
-              <LogoutButton />
-            </div>
-          </div>
-          */}
         </nav>
       </aside>
 
       {open && (
-        <div
-          className="fixed inset-0 z-20 bg-black/30 lg:hidden"
-          onClick={() => setOpen(false)}
-          aria-hidden
-        />
+        <div className="fixed inset-0 z-20 bg-black/30 lg:hidden" onClick={() => setOpen(false)} aria-hidden />
       )}
     </>
   );

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Mail, Phone, KeyRound, User, FileText } from "lucide-react";
+import { registerEmpresaAdmin } from "@/lib/api";
 
 export default function RegisterAdminPage() {
   const [form, setForm] = useState({
@@ -13,38 +14,28 @@ export default function RegisterAdminPage() {
     adminNombre: "",
     adminEmail: "",
     adminPassword: "",
-    smtpPassword: "",
+    smtpPassword: "", // opcional si tu backend lo acepta
   });
 
   const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     try {
-      const res = await fetch("http://localhost:3001/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
+      // Usa el helper que ya usa axios + baseURL correcta
+      await registerEmpresaAdmin(form);
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        console.error("❌ Error en registro:", data);
-        alert("Error: " + JSON.stringify(data.message));
-        return;
-      }
-
-      console.log("✅ Respuesta backend:", data);
       alert("Empresa + Admin creados correctamente ✅");
       router.push("/login");
-    } catch (error) {
-      console.error("Error en request:", error);
-      alert("Error al registrar");
+    } catch (err: any) {
+      // Si el backend no está respondiendo JSON, el helper ya normaliza el mensaje
+      console.error("❌ Error en registro:", err?.message || err);
+      alert(err?.message || "Error al registrar");
     }
   };
 
@@ -77,6 +68,7 @@ export default function RegisterAdminPage() {
                 onChange={handleChange}
                 placeholder="Mi Empresa SAC"
                 className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                required
               />
             </div>
           </div>
@@ -92,6 +84,7 @@ export default function RegisterAdminPage() {
                 onChange={handleChange}
                 placeholder="999 888 777"
                 className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                required
               />
             </div>
           </div>
@@ -108,6 +101,7 @@ export default function RegisterAdminPage() {
                 onChange={handleChange}
                 placeholder="contacto@empresa.com"
                 className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                required
               />
             </div>
           </div>
@@ -123,13 +117,16 @@ export default function RegisterAdminPage() {
                 onChange={handleChange}
                 placeholder="12345678901"
                 className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                required
               />
             </div>
           </div>
 
           {/* Admin info */}
           <div className="pt-2 border-t border-slate-200">
-            <h3 className="text-sm font-medium text-slate-800 mb-2">Administrador</h3>
+            <h3 className="text-sm font-medium text-slate-800 mb-2">
+              Administrador
+            </h3>
 
             <div className="relative mb-3">
               <User className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
@@ -138,6 +135,7 @@ export default function RegisterAdminPage() {
                 onChange={handleChange}
                 placeholder="Nombre completo"
                 className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                required
               />
             </div>
 
@@ -149,6 +147,7 @@ export default function RegisterAdminPage() {
                 onChange={handleChange}
                 placeholder="admin@empresa.com"
                 className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                required
               />
             </div>
 
@@ -160,6 +159,7 @@ export default function RegisterAdminPage() {
                 onChange={handleChange}
                 placeholder="Contraseña segura"
                 className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                required
               />
             </div>
 
@@ -169,7 +169,7 @@ export default function RegisterAdminPage() {
                 type="password"
                 name="smtpPassword"
                 onChange={handleChange}
-                placeholder="Contraseña app Gmail"
+                placeholder="Contraseña app Gmail (opcional)"
                 className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
               />
             </div>

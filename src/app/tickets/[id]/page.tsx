@@ -1,3 +1,4 @@
+// src/app/tickets/[id]/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
@@ -6,6 +7,7 @@ import instance from "@/lib/api";
 import TicketStatusChanger from "@/components/TicketStatusChanger";
 import { useAuthStore } from "@/components/useAuthStore";
 import AdminSLAForm from "@/components/AdminSLAForm";
+import AdminAssignPanel from "@/components/AdminAssignPanel";
 
 import {
   ArrowRightIcon,
@@ -19,8 +21,7 @@ import { Button } from "@/components/ui/button";
 
 /* ========= Config de archivos ========= */
 const FILES_BASE =
-  process.env.NEXT_PUBLIC_FILES_BASE ||
-  "https://tickets-backend-fw5d.onrender.com";
+  process.env.NEXT_PUBLIC_FILES_BASE || "http://localhost:3001"; // ajusta en prod
 
 /* ========= Tipos ========= */
 type Ticket = {
@@ -36,12 +37,11 @@ type Ticket = {
   usuarioSolicitante?: { id: number; username?: string; email?: string } | null;
   creator?: { id: number; username?: string; email?: string } | null;
   archivoNombre?: string[];
-  // SLA
   slaTotalMinutos?: number;
-  slaStartAt?: string;      // ISO string
-  slaGreenEndAt?: string;   // ISO string
-  slaYellowEndAt?: string;  // ISO string
-  deadlineAt?: string;      // ISO string
+  slaStartAt?: string;
+  slaGreenEndAt?: string;
+  slaYellowEndAt?: string;
+  deadlineAt?: string;
 };
 
 type HistItem = {
@@ -59,9 +59,11 @@ type HistItem = {
 /* ========= Badges helpers ========= */
 const statusBadge = (s?: string) => {
   const map: Record<string, string> = {
+    "no iniciado":
+      "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-50 text-slate-600 border border-slate-200",
     asignado:
       "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200",
-    "en progreso":
+    "en proceso":
       "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200",
     resuelto:
       "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200",
@@ -165,6 +167,13 @@ export default function TicketDetailPage() {
   const [loadingHist, setLoadingHist] = useState(true);
   const [mensaje, setMensaje] = useState("");
 
+  // tick para forzar re-render del SLA cada 60s
+  const [, setNowTick] = useState<number>(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 60_000); // 1 min
+    return () => clearInterval(id);
+  }, []);
+
   const fetchTicket = useCallback(async () => {
     if (!paramId) return;
     try {
@@ -211,7 +220,6 @@ export default function TicketDetailPage() {
     if (!ticket) return;
     try {
       await instance.patch(`/tickets/${ticket.id}/confirmar`);
-      setTicket((prev) => (prev ? { ...prev, confirmadoPorUsuario: true } : prev));
       await refreshTodo();
     } catch (err) {
       console.error(err);
@@ -223,7 +231,6 @@ export default function TicketDetailPage() {
     if (!ticket) return;
     try {
       await instance.patch(`/tickets/${ticket.id}/rechazar`);
-      setTicket((prev) => (prev ? { ...prev, rechazadoPorUsuario: true } : prev));
       await refreshTodo();
     } catch (err) {
       console.error(err);
@@ -288,6 +295,13 @@ export default function TicketDetailPage() {
           </div>
         </div>
 
+        {/* Panel ADMIN: asignar TI + SLA */}
+        {(userRole === "admin" || userRole === "super-admi") && (
+          <div className="mt-6">
+            <AdminAssignPanel ticketId={ticket.id} onChanged={refreshTodo} />
+          </div>
+        )}
+
         {/* Meta del ticket */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6 text-sm">
           <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
@@ -325,14 +339,10 @@ export default function TicketDetailPage() {
                 </div>
               )}
               <div className="h-2 bg-slate-200 rounded overflow-hidden">
-                <div
-                  className="h-2 transition-all"
-                  style={{ width: `${progress}%`, background: color }}
-                />
+                <div className="h-2 transition-all" style={{ width: `${progress}%`, background: color }} />
               </div>
 
-              {/* Botón solo para admin (cambia a ["admin","ti"].includes(userRole) si quieres permitir a TI) */}
-              {userRole === "admin" && (
+              {(userRole === "admin" || userRole === "super-admi") && (
                 <div className="pt-1">
                   <AdminSLAForm
                     ticketId={ticket.id}
@@ -363,7 +373,7 @@ export default function TicketDetailPage() {
           </div>
         </div>
 
-        {/* Controles TI / Adjuntos / Estado con TicketStatusChanger */}
+        {/* Controles TI / Adjuntos / Estado */}
         <div className="mt-6">
           <TicketStatusChanger
             ticket={ticket}
@@ -383,7 +393,7 @@ export default function TicketDetailPage() {
           />
         </div>
 
-        {/* Adjuntos actuales del ticket */}
+        {/* Adjuntos */}
         {ticket.archivoNombre?.length ? (
           <div className="mt-6">
             <div className="text-sm text-slate-700 mb-2 flex items-center gap-2">
@@ -430,7 +440,7 @@ export default function TicketDetailPage() {
           )}
       </div>
 
-      {/* Historial de cambios */}
+      {/* Historial */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-4 text-slate-700">
           <ClockIcon className="h-5 w-5" />
@@ -511,9 +521,7 @@ export default function TicketDetailPage() {
                       )}
                     </div>
 
-                    {h.mensaje ? (
-                      <p className="text-slate-600 italic">“{h.mensaje}”</p>
-                    ) : null}
+                    {h.mensaje ? <p className="text-slate-600 italic">“{h.mensaje}”</p> : null}
 
                     {h.adjuntoNombre && h.adjuntoNombre.length > 0 && (
                       <div className="pt-2">
@@ -545,7 +553,7 @@ export default function TicketDetailPage() {
         )}
       </div>
 
-      {/* Aviso sin privilegios */}
+      {/* Aviso sin privilegios (muestra si NO eres TI; ajusta si quieres) */}
       {userRole !== "ti" && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800 text-sm flex items-start gap-2">
           <ExclamationTriangleIcon className="h-5 w-5 mt-0.5" />

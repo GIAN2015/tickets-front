@@ -1,8 +1,9 @@
-// src/store/useAuthStore.ts
+// src/components/useAuthStore.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export type User = {
+  id?: number | null;               // 👈 AGREGA ESTO
   username?: string | null;
   role?: string | null;
   empresaId?: number | string | null;
@@ -25,11 +26,11 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       token: null,
       user: null,
-      hasHydrated: false, 
+      hasHydrated: false,
 
       setAuth: (token, user) => set({ token, user }),
       clearAuth: () => set({ token: null, user: null }),
-      setHydrated: (val) => set({ hasHydrated: val }), 
+      setHydrated: (val) => set({ hasHydrated: val }),
     }),
     {
       name: "auth-storage",

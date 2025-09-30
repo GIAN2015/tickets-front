@@ -18,7 +18,6 @@ import { Label } from "@/components/ui/label";
 type Props = {
   ticketId: number;
   onSaved?: () => Promise<void> | void;
-  /** valores actuales del ticket (opcionales) */
   currentTotalMin?: number;
   currentGreenEnd?: string;
   currentYellowEnd?: string;
@@ -32,15 +31,14 @@ export default function AdminSLAForm({
 }: Props) {
   const [open, setOpen] = useState(false);
 
-  // Inputs de tiempo (para UX). El backend SOLO usa "dias"
+  // Inicializa desde currentTotalMin si viene
   const [dias, setDias] = useState<number>(currentTotalMin ? Math.floor(currentTotalMin / (60 * 24)) : 0);
   const [horas, setHoras] = useState<number>(currentTotalMin ? Math.floor((currentTotalMin % (60 * 24)) / 60) : 0);
   const [minutos, setMinutos] = useState<number>(currentTotalMin ? (currentTotalMin % 60) : 0);
 
-  // Porcentajes visibles (0..100). El backend espera 0..1
+  // Porcentajes visibles (0..100). El backend espera 0..1 (los normaliza)
   const [greenPct, setGreenPct] = useState<number>(40);
   const [yellowPct, setYellowPct] = useState<number>(40);
-
   const redPct = useMemo(() => Math.max(0, 100 - greenPct - yellowPct), [greenPct, yellowPct]);
 
   const totalMin = useMemo(() => (dias * 24 * 60) + (horas * 60) + minutos, [dias, horas, minutos]);
@@ -52,8 +50,15 @@ export default function AdminSLAForm({
     { label: "5 días", d: 5, h: 0, m: 0 },
   ];
 
+  const clamp = (n: number, min = 0, max = 999999) => Math.max(min, Math.min(max, n | 0));
+
   const save = async () => {
-    if (totalMin <= 0) {
+    const cleanDias = Math.max(0, (dias | 0));
+    const cleanHoras = Math.max(0, Math.min(23, (horas | 0)));
+    const cleanMin = Math.max(0, Math.min(59, (minutos | 0)));
+
+    const total = cleanDias * 24 * 60 + cleanHoras * 60 + cleanMin;
+    if (total <= 0) {
       alert("El tiempo total debe ser mayor a 0.");
       return;
     }
@@ -62,29 +67,18 @@ export default function AdminSLAForm({
       return;
     }
 
-    // 👉 El backend espera DIAS >= 1 (entero). Convertimos tu total a días.
-    const diasEnteros = Math.max(1, Math.ceil(totalMin / (24 * 60)));
+    await instance.patch(`/tickets/${ticketId}/sla`, {
+      totalMinutos: total,               // <<--- clave
+      greenPct: Math.min(1, Math.max(0, greenPct / 100)),
+      yellowPct: Math.min(1, Math.max(0, yellowPct / 100)),
+      // redPct opcional
+    });
 
-    // 👉 Convertimos 40 → 0.40 (decimales 0..1)
-    const greenPctDec = Math.min(1, Math.max(0, greenPct / 100));
-    const yellowPctDec = Math.min(1, Math.max(0, yellowPct / 100));
-
-    try {
-      await instance.patch(`/tickets/${ticketId}/sla`, {
-        dias: diasEnteros,
-        greenPct: greenPctDec,
-        yellowPct: yellowPctDec,
-        // redPct es opcional; tu servicio normaliza si no se envía
-      });
-
-      setOpen(false);
-      if (onSaved) await onSaved();
-      alert("✅ SLA configurado correctamente");
-    } catch (err: any) {
-      console.error(err?.response?.data || err);
-      alert(err?.response?.data?.message || "No se pudo configurar el SLA.");
-    }
+    setOpen(false);
+    if (onSaved) await onSaved();
+    alert("✅ SLA configurado correctamente");
   };
+
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -123,7 +117,7 @@ export default function AdminSLAForm({
               type="number"
               min={0}
               value={dias}
-              onChange={(e) => setDias(parseInt(e.target.value || "0", 10))}
+              onChange={(e) => setDias(clamp(parseInt(e.target.value || "0", 10), 0))}
             />
           </div>
           <div>
@@ -131,8 +125,9 @@ export default function AdminSLAForm({
             <Input
               type="number"
               min={0}
+              max={23}
               value={horas}
-              onChange={(e) => setHoras(parseInt(e.target.value || "0", 10))}
+              onChange={(e) => setHoras(clamp(parseInt(e.target.value || "0", 10), 0, 23))}
             />
           </div>
           <div>
@@ -140,13 +135,14 @@ export default function AdminSLAForm({
             <Input
               type="number"
               min={0}
+              max={59}
               value={minutos}
-              onChange={(e) => setMinutos(parseInt(e.target.value || "0", 10))}
+              onChange={(e) => setMinutos(clamp(parseInt(e.target.value || "0", 10), 0, 59))}
             />
           </div>
         </div>
         <p className="text-xs text-slate-500 -mt-2">
-          Total: <b>{totalMin}</b> minutos. (se enviará como <b>{Math.max(1, Math.ceil(totalMin / (24 * 60)))}</b> día/s)
+          Total: <b>{totalMin}</b> minutos.
         </p>
 
         {/* Porcentajes */}
@@ -158,7 +154,7 @@ export default function AdminSLAForm({
               min={0}
               max={100}
               value={greenPct}
-              onChange={(e) => setGreenPct(Math.max(0, Math.min(100, parseInt(e.target.value || "0", 10))))}
+              onChange={(e) => setGreenPct(clamp(parseInt(e.target.value || "0", 10), 0, 100))}
             />
           </div>
           <div>
@@ -168,7 +164,7 @@ export default function AdminSLAForm({
               min={0}
               max={100}
               value={yellowPct}
-              onChange={(e) => setYellowPct(Math.max(0, Math.min(100, parseInt(e.target.value || "0", 10))))}
+              onChange={(e) => setYellowPct(clamp(parseInt(e.target.value || "0", 10), 0, 100))}
             />
           </div>
           <div>
