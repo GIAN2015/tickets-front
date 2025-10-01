@@ -1,7 +1,7 @@
 // src/utils/date.ts
 export const APP_TZ = "America/Lima"; // cambia si necesitas otra TZ
 export const APP_LOCALE = "es-PE";
-
+//(hola)
 export function fmtDateTime(input: string | number | Date) {
   const d = new Date(input);
   return new Intl.DateTimeFormat(APP_LOCALE, {
