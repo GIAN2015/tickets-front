@@ -11,7 +11,7 @@ export const publicRoutes = ["/login", "/register-admin"] as const;
 
 export const roleRoutes: Record<string, string[]> = {
   "super-admi": ["/usuarios", "/dashboard", "/registro", "/tickets"], 
-  admin: ["/usuarios", "/dashboard", "/registro", "/tickets"],                 // /usuarios y subrutas
+  admin: ["/usuarios", "/dashboard", "/registro", "/tickets", "/metricas"],                 // /usuarios y subrutas
   user: ["/dashboard", "/tickets"],
   ti: ["/dashboard", "/tickets"],
 };

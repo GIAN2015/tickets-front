@@ -14,6 +14,7 @@ import {
   PlusSquare,
   ClipboardList,
   UserCheck, // 👈 Asignar Tickets
+  BarChart3, // 👈 Métricas (nuevo)
 } from "lucide-react";
 import { useAuthStore } from "./useAuthStore";
 
@@ -34,6 +35,7 @@ export default function Sidebar() {
   const isDashboard = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
   const isTicketsNew = pathname === "/tickets/new";
   const isAsignar = pathname === "/tickets/asignar" || pathname.startsWith("/tickets/asignar/");
+  const isMetricas = pathname === "/metricas" || pathname.startsWith("/metricas/"); // 👈 nuevo
   let isMisTickets =
     pathname === "/tickets" ||
     (pathname.startsWith("/tickets/") &&
@@ -44,6 +46,10 @@ export default function Sidebar() {
   const navItems = [
     { href: "/usuarios", label: "Usuarios", icon: Users, isActive: isUsuarios },
     { href: "/dashboard", label: "Dashboard", icon: LayoutGrid, isActive: isDashboard },
+
+    // 👇 SOLO ADMIN
+    { href: "/metricas", label: "Métricas", icon: BarChart3, isActive: isMetricas, allowedRoles: ["admin"] },
+
     {
       href: "/tickets/new",
       label: "Nuevo Ticket",
@@ -135,7 +141,11 @@ export default function Sidebar() {
       </aside>
 
       {open && (
-        <div className="fixed inset-0 z-20 bg-black/30 lg:hidden" onClick={() => setOpen(false)} aria-hidden />
+        <div
+          className="fixed inset-0 z-20 bg-black/30 lg:hidden"
+          onClick={() => setOpen(false)}
+          aria-hidden
+        />
       )}
     </>
   );
