@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import LogoutButton from "@/components/LogoutButton";
 import { User, Settings, ClipboardList, ChevronDown } from "lucide-react";
 import { useAuthStore } from "./useAuthStore";
-
+import NotificationBell from "@/components/ui/NotificationBell"; // 👈 NUEVO
 
 export default function Header() {
   const pathname = usePathname();
@@ -85,8 +85,12 @@ export default function Header() {
           <div>{leftText}</div>
         </div>
 
-        {/* RIGHT: usuario */}
+        {/* RIGHT: notificaciones + usuario */}
         <div className="flex items-center gap-4">
+          {/* 🔔 Campanita de notificaciones */}
+          <NotificationBell />
+
+          {/* Menú de usuario */}
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setOpen((v) => !v)}
