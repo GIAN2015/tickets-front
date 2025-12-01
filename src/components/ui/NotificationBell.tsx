@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -25,14 +24,14 @@ export default function NotificationBell() {
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const hasAuth = !!token; 
+  const hasAuth = !!token;
   const authHeaders: HeadersInit = token
     ? { Authorization: `Bearer ${token}` }
     : {};
 
   // 🔢 Traer solo el contador (para el badge)
   const fetchCount = useCallback(async () => {
-     if (!hasAuth || !API_URL) return;  
+    if (!hasAuth || !API_URL) return;
     try {
       const res = await fetch(`${API_URL}/notifications/me/unread-count`, {
         headers: authHeaders,
@@ -117,6 +116,17 @@ export default function NotificationBell() {
     });
   };
 
+  // Función para determinar si la notificación es de hoy
+  const isToday = (date: string) => {
+    const notifDate = new Date(date);
+    const today = new Date();
+    return notifDate.toDateString() === today.toDateString();
+  };
+
+  // Filtrar notificaciones de hoy y de fechas anteriores
+  const todayNotifications = items.filter((n) => isToday(n.createdAt));
+  const pastNotifications = items.filter((n) => !isToday(n.createdAt));
+
   return (
     <div className="relative">
       <button
@@ -150,19 +160,61 @@ export default function NotificationBell() {
             </div>
           )}
 
-          {items.length > 0 && (
+          {todayNotifications.length > 0 && (
+            <div className="px-3 py-2 border-b border-slate-100">
+              <h4 className="text-sm font-semibold text-slate-800">Hoy</h4>
+            </div>
+          )}
+
+          {todayNotifications.length > 0 && (
             <ul className="divide-y divide-slate-100">
-              {items.map((n) => (
+              {todayNotifications.map((n) => (
                 <li
                   key={n.id}
-                  className={`px-3 py-2 text-sm ${
-                    n.read ? "bg-white" : "bg-sky-50"
-                  }`}
+                  className={`px-3 py-2 text-sm ${n.read ? "bg-white" : "bg-sky-50"}`}
                 >
                   <div className="flex items-start gap-2">
                     <div className="mt-0.5 h-2 w-2 rounded-full bg-sky-500" />
                     <div className="flex-1">
-                      <p className="text-slate-800">{n.message}</p>
+                      <a 
+                        href={`/tickets/${n.ticketId}`} 
+                        className="text-slate-800 hover:text-sky-500"
+                      >
+                        <p className="text-slate-800">{n.message}</p>
+                      </a>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {formatDate(n.createdAt)}
+                        {n.ticketId ? ` · Ticket #${n.ticketId}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {pastNotifications.length > 0 && (
+            <div className="px-3 py-2 border-b border-slate-100">
+              <h4 className="text-sm font-semibold text-slate-800">Anteriores</h4>
+            </div>
+          )}
+
+          {pastNotifications.length > 0 && (
+            <ul className="divide-y divide-slate-100">
+              {pastNotifications.map((n) => (
+                <li
+                  key={n.id}
+                  className={`px-3 py-2 text-sm ${n.read ? "bg-white" : "bg-sky-50"}`}
+                >
+                  <div className="flex items-start gap-2">
+                    <div className="mt-0.5 h-2 w-2 rounded-full bg-sky-500" />
+                    <div className="flex-1">
+                      <a 
+                        href={`/tickets/${n.ticketId}`} 
+                        className="text-slate-800 hover:text-sky-500"
+                      >
+                        <p className="text-slate-800">{n.message}</p>
+                      </a>
                       <p className="text-xs text-slate-400 mt-0.5">
                         {formatDate(n.createdAt)}
                         {n.ticketId ? ` · Ticket #${n.ticketId}` : ""}
