@@ -13,13 +13,13 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  // 👇 ahora todo viene de zustand (reactivo)
+  
   const user = useAuthStore((state) => state.user);
   const role = user?.role ? user.role.toUpperCase() : null;
   const nombreEmpresa = user?.empresaNombre ?? null;
   const usuarioNombre = user?.username ?? "Mi cuenta";
 
-  // cerrar menú con click afuera/escape
+
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
