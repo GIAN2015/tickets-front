@@ -57,7 +57,7 @@ export default function Sidebar() {
       isActive: isTicketsNew,
       allowedRoles: ["admin", "user"], // 👈 TI no lo ve
     },
-    { href: "/tickets", label: "Mis Tickets", icon: ClipboardList, isActive: isMisTickets },
+    { href: "/tickets/completados", label: "Tickets Completados", icon: ClipboardList, isActive: isMisTickets },
     {
       href: "/tickets/asignar",
       label: "Asignar Tickets",

@@ -72,14 +72,16 @@ export default function AdminAssignPanel({
       await instance.patch(`/tickets/${ticketId}/asignar`, { userId: selectedTi });
 
       // 2) Configurar SLA (opcional)
+      // 2) Configurar SLA (opcional)
       if (setSlaEnabled) {
         await instance.patch(`/tickets/${ticketId}/sla`, {
-          totalMinutos,                               // backend ya acepta totalMinutos
+          totalMinutos, // ✅ minutos exactos
           greenPct: Math.min(1, Math.max(0, greenPct / 100)),
           yellowPct: Math.min(1, Math.max(0, yellowPct / 100)),
-          // redPct opcional (el backend normaliza)
+          redPct: Math.min(1, Math.max(0, yellowPct / 100)),
         });
       }
+    
 
       const { data } = await instance.get(`/tickets/${ticketId}`);
       setTicket(data);
@@ -150,7 +152,7 @@ export default function AdminAssignPanel({
             checked={setSlaEnabled}
             onChange={(e) => setSetSlaEnabled(e.target.checked)}
           />
-        <span>Configurar SLA junto con la asignación</span>
+          <span>Configurar SLA junto con la asignación</span>
         </label>
 
         {setSlaEnabled && (

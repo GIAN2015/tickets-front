@@ -143,24 +143,15 @@ export default function Header() {
                   href="/profile"
                   className="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
                 >
-                  <User className="w-4 h-4 text-slate-400" />
-                  Perfil
+       
                 </Link>
 
                 <Link
-                  href="/settings"
+                  href="/dashboard"
                   className="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
                 >
-                  <Settings className="w-4 h-4 text-slate-400" />
-                  Configuración
-                </Link>
-
-                <Link
-                  href="/tickets"
-                  className="flex items-center gap-3 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                >
-                  <ClipboardList className="w-4 h-4 text-slate-400" />
-                  Mis Tickets
+                  <ClipboardList  className="w-4 h-4 text-slate-400" />
+                  Mis tickets
                 </Link>
 
                 <div className="my-1 border-t border-slate-100" />
